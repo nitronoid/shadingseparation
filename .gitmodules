@@ -1,0 +1,6 @@
+[submodule "dep/span-lite"]
+	path = dep/span-lite
+	url = git@github.com:martinmoene/span-lite.git
+[submodule "dep/stb"]
+	path = dep/stb
+	url = git@github.com:nothings/stb.git

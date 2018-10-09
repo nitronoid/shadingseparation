@@ -1,0 +1,6 @@
+appgen
+obj
+dump.ppm
+*.pro.user*
+*.qmake*
+Makefile
