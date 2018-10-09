@@ -20,7 +20,7 @@ std::ostream &operator<< (std::ostream &out, const uint3 &vec)
 // convert RGB float in range [0,1] to int in range [0, 255] and perform gamma correction
 inline uint3 quantize(fpreal3 x)
 { 
-  static constexpr fpreal gamma = 1.0 / 2.2;
+  static constexpr fpreal gamma = 1.0;// / 2.2;
   static const fpreal3 gamma3(gamma);
   return uint3(glm::pow(x, gamma3) * 255.0f + 0.5f); 
 }  
