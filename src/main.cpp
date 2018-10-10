@@ -69,12 +69,17 @@ auto readImage(std::string_view _filename)
 
 int main()
 {
+  // Read the source image in as an array of rgbf
   auto [source, dim] = readImage("images/conv.png");
   auto size = dim.x * dim.y;
+  // Remove highlights and shadows
   for (uinteger i = 0; i < size; ++i) source[i] = glm::clamp(source[i], fpreal3(25.f / 255.f), fpreal3(235.f / 255.f));
+  // Extract the intensity as the average of rgb
   auto intensity = std::make_unique<fpreal3[]>(size);
   for (uinteger i = 0; i < size; ++i) intensity[i] = fpreal3((source[i].x + source[i].y + source[i].z) / 3);
 
+  // Extract the chroma of the image using out intensity
+  // {r/i, g/i, 3 - r/i - g/i}
   auto chroma = std::make_unique<fpreal3[]>(size);
   for (uinteger i = 0; i < size; ++i) 
   {
@@ -82,11 +87,15 @@ int main()
     chroma[i].g = source[i].g / intensity[i].r;
     chroma[i].b = 3.0f - chroma[i].r - chroma[i].g;
   }
+  // Our shading intensity defaults to one, so that albedo intensity can be = intensity
+  // i = si * ai
   auto shadingIntensity = std::make_unique<fpreal3[]>(size);
   for (uinteger i = 0; i < size; ++i) shadingIntensity[i] = fpreal3(1.0f);
   auto albedoIntensity  = std::make_unique<fpreal3[]>(size);
   for (uinteger i = 0; i < size; ++i) albedoIntensity[i] = intensity[i];
 
+  // Divide our images into regions, we store the regions as coordinates,
+  // as we know the width and height is the same for each
   static constexpr uinteger w = 64;
   auto regionSize = w * w;
   auto regionDim = dim / w;
@@ -98,10 +107,14 @@ int main()
     regions[y * regionDim.x + x] = uint2{x * w, y * w};
   }
 
+  // For each region
   for (uinteger i = 0; i < numRegions; ++i)
   {
     auto&& region = regions[i];
 
+    // Define our hashing algorithm as quantization of r and g into 20 slots,
+    // to give 400 possible chroma values
+    // We group by quantized chroma value so that we can assume the same material
     static constexpr uinteger numSlots = 20u;
     static constexpr auto hashChroma = [](fpreal3 chroma, fpreal3 max)
     {
@@ -112,6 +125,10 @@ int main()
     };
     std::array<std::vector<uint2>, numSlots * numSlots> chromaRegions;
 
+
+    // Group using the chromas, storing the index into the current region that gives us the real pixel
+    // We first copy the chroma values for the region into a local array, and simultaneously find the
+    // maximum chroma value for quantization
     auto regionChroma = std::make_unique<fpreal3[]>(regionSize);
     auto maxChroma = fpreal3(0.f);
     for (uinteger x = 0; x < w; ++x)
@@ -122,15 +139,20 @@ int main()
       regionChroma[regionPx] = chromaVal;
       maxChroma = glm::max(maxChroma, chromaVal);
     }
+    // Now we hash our copied chroma values
     for (uinteger x = 0; x < w; ++x)
     for (uinteger y = 0; y < w; ++y)
     {
       auto regionPx = y * w + x;
-      chromaRegions[hashChroma(regionChroma[regionPx], maxChroma)].push_back({x,y});
+      chromaRegions[hashChroma(std::move(regionChroma[regionPx]), maxChroma)].push_back({x,y});
     } 
 
+    //TODO: Expectation maximisation
     for (int iters = 0; iters < 5; ++iters)
     {
+      //TODO: Expectation step:
+
+      // Maximisation step:
       fpreal3 shadingIntensitySum(0.0f);
       for (uinteger x = 0; x < w; ++x)
       for (uinteger y = 0; y < w; ++y)
@@ -163,10 +185,16 @@ int main()
 
   for (uinteger i = 0; i < size; ++i) 
   {
-    shadingIntensity[i] = intensity[i] / albedoIntensity[i];// - 0.6f;
+    shadingIntensity[i] = intensity[i] / albedoIntensity[i] * 0.5f + 0.2f;
+  }
+  auto albedo = std::make_unique<fpreal3[]>(size);
+  for (uinteger i = 0; i < size; ++i) 
+  {
+    albedo[i] = source[i] / shadingIntensity[i];
   }
 
 
-  writeImage("dump.ppm", nonstd::span<const fpreal3>{shadingIntensity.get(), size}, &dim.x);
+  writeImage("albedoDump.ppm", nonstd::span<const fpreal3>{albedo.get(), size}, &dim.x);
+  writeImage("shadingDump.ppm", nonstd::span<const fpreal3>{shadingIntensity.get(), size}, &dim.x);
   return 0;
 }
