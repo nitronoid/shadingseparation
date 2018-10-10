@@ -4,3 +4,4 @@ dump.ppm
 *.pro.user*
 *.qmake*
 Makefile
+*.ppm

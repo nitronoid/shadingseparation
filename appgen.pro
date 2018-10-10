@@ -29,9 +29,10 @@ message($${INCLUDEPATH})
 HEADERS += $$files(include/*.h, true)
 SOURCES += $$files(src/*.cpp, true)
 
-#LIBS += -ltbb
+LIBS += -ltbb -lstdc++fs
 #DEFINES += _GLIBCXX_PARALLEL
 DEFINES += GLM_ENABLE_EXPERIMENTAL GLM_FORCE_CTOR_INIT
+DEFINES += DEBUG_OUTPUT_CONVERGENCE=0
 
 QMAKE_CXXFLAGS += -std=c++17 -g
 QMAKE_CXXFLAGS += -Ofast -msse -msse2 -msse3 -march=native -fopenmp -frename-registers -funroll-loops 
