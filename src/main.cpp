@@ -200,8 +200,9 @@ inline static auto getParser()
 {
   cxxopts::Options parser("Pathtracer", "Jack's implementation of smallpt.");
   parser.allow_unrecognised_options().add_options()
+  ("h,help", "Print help")
+  ("s,source", "Source file name", cxxopts::value<std::string>())
   ("i,iterations", "Seperation iterations", cxxopts::value<uinteger>()->default_value("3"))
-  ("s,source", "Source file name", cxxopts::value<std::string>()->default_value(""))
   ("o,output", "Output file name (no extension)", cxxopts::value<std::string>()->default_value("shading"))
   ("f,format", "Output file format (the extension)", cxxopts::value<std::string>()->default_value("png"))
   ;
@@ -214,9 +215,9 @@ int main(int argc, char* argv[])
 {
   auto parser = getParser();
   const auto args = parser.parse(argc, argv);
-  if (args.count("help"))
+  if (args.count("help") || !args.count("source"))
   {
-    std::cout<<parser.help({"", "Group"})<<'\n';
+    std::cout<<parser.help()<<'\n';
     std::exit(0);
   }
 
