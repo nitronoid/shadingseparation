@@ -5,3 +5,4 @@ dump.ppm
 *.qmake*
 Makefile
 *.ppm
+results

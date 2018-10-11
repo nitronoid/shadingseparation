@@ -6,6 +6,7 @@
 #include <glm/gtx/fast_square_root.hpp>
 #include <glm/gtx/fast_trigonometry.hpp>
 #include <OpenImageIO/imageio.h>
+#include <cxxopts.hpp>
 
 namespace
 {
@@ -28,8 +29,9 @@ inline uint3 quantize(fpreal3 x)
 }  
 
 template <typename T>
-void writeImage(string_view _filename, span<T> _data, const uinteger* _dim)
+void writeImage(string_view _filename, span<T> _data, const uint2 _imageDim)
 {
+  std::cout<<"Writing image to "<<_filename<<'\n';
   // OpenImageIO namespace
   using namespace OIIO;
   // unique_ptr with custom deleter to close file on exit
@@ -37,7 +39,7 @@ void writeImage(string_view _filename, span<T> _data, const uinteger* _dim)
       ImageOutput::create(_filename.data()),
       [](auto ptr) { ptr->close(); delete ptr; }
       );
-  ImageSpec is(_dim[0], _dim[1], sizeof(T)/sizeof(fpreal), TypeDesc::FLOAT);
+  ImageSpec is(_imageDim.x, _imageDim.y, sizeof(T)/sizeof(fpreal), TypeDesc::FLOAT);
   output->open(_filename.data(), is);
   output->write_image(TypeDesc::FLOAT, _data.data());
 }
@@ -64,7 +66,7 @@ auto readImage(string_view _filename)
   struct OwningSpan
   {
     std::unique_ptr<fpreal3[]> m_data;
-    uint2 m_dim;
+    uint2 m_imageDim;
   };
   return OwningSpan{std::move(data), std::move(dim)};
 }
@@ -194,15 +196,35 @@ auto makeSpan(std::unique_ptr<T[]>& _data, uinteger _size)
   return span<T>{_data.get(), std::move(_size)};
 }
 
+inline static auto getParser()
+{
+  cxxopts::Options parser("Pathtracer", "Jack's implementation of smallpt.");
+  parser.allow_unrecognised_options().add_options()
+  ("i,iterations", "Seperation iterations", cxxopts::value<uinteger>()->default_value("3"))
+  ("s,source", "Source file name", cxxopts::value<std::string>()->default_value(""))
+  ("o,output", "Output file name (no extension)", cxxopts::value<std::string>()->default_value("shading"))
+  ("f,format", "Output file format (the extension)", cxxopts::value<std::string>()->default_value("png"))
+  ;
+  return parser;
 }
 
-int main()
+}
+
+int main(int argc, char* argv[])
 {
+  auto parser = getParser();
+  const auto args = parser.parse(argc, argv);
+  if (args.count("help"))
+  {
+    std::cout<<parser.help({"", "Group"})<<'\n';
+    std::exit(0);
+  }
+
   // Read the source image in as an array of rgbf
-  auto imgResult = readImage("images/rust.png");
+  auto imgResult = readImage(args["source"].as<std::string>());
   auto&& source = imgResult.m_data;
-  auto&& dim = imgResult.m_dim;
-  auto size = dim.x * dim.y;
+  auto&& imageDim = imgResult.m_imageDim;
+  auto size = imageDim.x * imageDim.y;
   // Remove highlights and shadows
   for (uinteger i = 0; i < size; ++i) source[i] = glm::clamp(source[i], fpreal3(25.f / 255.f), fpreal3(235.f / 255.f));
   // Extract the intensity as the average of rgb
@@ -222,14 +244,15 @@ int main()
   // We know the width and height is the same for each
   const uinteger regionScale = 20u;
   const uinteger regionSize  = regionScale * regionScale;
-  auto regionResult = generateRegions(dim, regionScale, albedoIntensity.get());
+  auto regionResult = generateRegions(imageDim, regionScale, albedoIntensity.get());
   auto&& regions = regionResult.m_regions;
   auto&& pixelRegions = regionResult.m_pixelRegions;
   auto&& regionDim = regionResult.m_dim;
   auto numRegions = regionDim.x * regionDim.y;
   std::cout<<"Regions Complete.\n";
 
-  for (int iter = 0; iter < 4; ++iter)
+  const auto maxIter = args["iterations"].as<uinteger>();
+  for (uinteger iter = 0u; iter < maxIter; ++iter)
   {
 
     // For each region
@@ -252,7 +275,7 @@ int main()
             regionChromas[local] = chromaVal;
             maxChroma = glm::max(maxChroma, chromaVal);
           },
-          dim, regionScale
+          imageDim, regionScale
       );
       
       // Now we hash our copied chroma values
@@ -261,7 +284,7 @@ int main()
             auto qChromaHash = hashChroma(std::move(regionChromas[local]), maxChroma, numSlots);
             quantizedChromas[qChromaHash].emplace_back(local % regionScale, local / regionScale);
           },
-          dim, regionScale
+          imageDim, regionScale
       );
 
       // Average the shading intensity
@@ -270,7 +293,7 @@ int main()
           {
             shadingIntensitySum += (intensity[pixel] / region.m_albedoIntensities[local]);
           },
-          dim, regionScale
+          imageDim, regionScale
       );
       auto shadingIntensityAverageRecip = shadingIntensitySum * (1.0f / regionSize);
 
@@ -281,7 +304,7 @@ int main()
         for (auto&& rpx : qChroma) 
         {
           auto pixelCoord = region.getPixelCoordFromLocal(rpx);
-          sum += intensity[pixelCoord.y * dim.x + pixelCoord.x];
+          sum += intensity[pixelCoord.y * imageDim.x + pixelCoord.x];
         }
         auto averageChromaIntensity = sum / static_cast<fpreal>(qChroma.size());
         for (auto&& rpx : qChroma) 
@@ -294,7 +317,7 @@ int main()
           {
             region.m_albedoIntensities[local] = commonChromaIntensitySums[local] * shadingIntensityAverageRecip;
           },
-          dim, regionScale
+          imageDim, regionScale
       );
     }
     std::cout<<"Maximisation Complete.\n";
@@ -306,14 +329,14 @@ int main()
       fpreal totalAlbedoIntensity = 0.f;
       for (auto rptr : pixelRegions[pixelId])
       {
-        totalAlbedoIntensity += *rptr->getAlbedoIntensity(pixelId, dim, regionScale);
+        totalAlbedoIntensity += *rptr->getAlbedoIntensity(pixelId, imageDim, regionScale);
       }
       // Store the albedo intensity for the current pixel
       albedoIntensity[pixelId] = totalAlbedoIntensity/ pixelRegions[pixelId].size();
       for (auto rptr : pixelRegions[pixelId])
       {
         // Update the stored albedo intensity for each region
-        *rptr->getAlbedoIntensity(pixelId, dim, regionScale) = albedoIntensity[pixelId];
+        *rptr->getAlbedoIntensity(pixelId, imageDim, regionScale) = albedoIntensity[pixelId];
       }
     }
     std::cout<<"Expectation Complete.\n";
@@ -337,7 +360,9 @@ int main()
   }
 
 
-  writeImage( "albedoDump.png", makeSpan(albedo, size), &dim.x);
-  writeImage("shadingDump.png", makeSpan(shadingIntensity, size), &dim.x);
+  const auto outputPrefix = args["output"].as<std::string>();
+  const auto extension    = args["format"].as<std::string>();
+  writeImage(outputPrefix + "_albedo." + extension , makeSpan(albedo, size), imageDim);
+  writeImage(outputPrefix + "_shading." + extension, makeSpan(shadingIntensity, size), imageDim);
   return 0;
 }
