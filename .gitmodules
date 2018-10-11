@@ -4,3 +4,6 @@
 [submodule "dep/stb"]
 	path = dep/stb
 	url = git@github.com:nothings/stb.git
+[submodule "dep/string-view-lite"]
+	path = dep/string-view-lite
+	url = git@github.com:martinmoene/string-view-lite.git

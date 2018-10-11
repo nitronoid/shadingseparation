@@ -1,16 +1,11 @@
-#include <QImage>
+#include "types.h"
 #include <iomanip>
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
-#include "types.h"
-#include <nonstd/span.hpp>
-#include <string_view>
 #include <glm/gtx/fast_square_root.hpp>
 #include <glm/gtx/fast_trigonometry.hpp>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#include <filesystem>
+#include <OpenImageIO/imageio.h>
 
 namespace
 {
@@ -32,47 +27,44 @@ inline uint3 quantize(fpreal3 x)
   return uint3(glm::pow(x, gamma3) * 255.0f + 0.5f); 
 }  
 
-void writeImage(std::string_view _filename, nonstd::span<const fpreal3> _data, const uinteger* _dim)
+template <typename T>
+void writeImage(string_view _filename, span<T> _data, const uinteger* _dim)
 {
-  // Write image to PPM file, a very simple image file format
-  std::ofstream outFile;
-  outFile.open(_filename.data());
-  outFile<<"P3\n"<<_dim[0]<<" "<<_dim[1]<<"\n255\n";
-  const auto size = _data.size();
-  for (uinteger i = 0u; i < size; i++)  // loop over pixels, write RGB values
-    outFile<<quantize(_data[i])<<'\n';
+  // OpenImageIO namespace
+  using namespace OIIO;
+  // unique_ptr with custom deleter to close file on exit
+  std::unique_ptr<ImageOutput, void(*)(ImageOutput*)> output(
+      ImageOutput::create(_filename.data()),
+      [](auto ptr) { ptr->close(); delete ptr; }
+      );
+  ImageSpec is(_dim[0], _dim[1], sizeof(T)/sizeof(fpreal), TypeDesc::FLOAT);
+  output->open(_filename.data(), is);
+  output->write_image(TypeDesc::FLOAT, _data.data());
 }
 
-void writeImage(std::string_view _filename, nonstd::span<const fpreal> _data, const uinteger* _dim)
+auto readImage(string_view _filename)
 {
-  // Write image to PPM file, a very simple image file format
-  std::ofstream outFile;
-  outFile.open(_filename.data());
-  outFile<<"P3\n"<<_dim[0]<<" "<<_dim[1]<<"\n255\n";
-  const auto size = _data.size();
-  for (uinteger i = 0u; i < size; i++)  // loop over pixels, write RGB values
-    outFile<<quantize(fpreal3(_data[i]))<<'\n';
-}
+  // OpenImageIO namespace
+  using namespace OIIO;
+  // unique_ptr with custom deleter to close file on exit
+  std::unique_ptr<ImageInput, void(*)(ImageInput*)> input(
+      ImageInput::open(_filename.data()),
+      [](auto ptr) { ptr->close(); delete ptr; }
+      );
+  // Get the image specification and store the dimensions
+  auto&& spec = input->spec();
+  uint2 dim {spec.width, spec.height};
 
-auto readImage(std::string_view _filename)
-{
-  QImage input(_filename.data());
-  uint2 dim {input.width(), input.height()};
+  // Allocated an array for our data
   auto data = std::make_unique<fpreal3[]>(dim.x * dim.y);
-  static constexpr auto div = 1.f / 255.f;
-  for (uinteger x = 0u; x < dim.x; ++x)
-  for (uinteger y = 0u; y < dim.y; ++y)
-  {
-    auto col = input.pixelColor(x, y);
-    int3 icol;
-    col.getRgb(&icol.x, &icol.y, &icol.z); 
-    data[y * dim.x + x] = fpreal3{icol.x * div, icol.y * div, icol.z * div}; 
-  }
-  // return an owning span, 
+  // Read the data into our array, with a specified stride of 3 floats (RGB), we ignore the alpha channel
+  input->read_image(TypeDesc::FLOAT, data.get(), sizeof(fpreal3), AutoStride, AutoStride);
+  
+  // return an owning span 
   struct OwningSpan
   {
-    std::unique_ptr<fpreal3[]> data;
-    uint2 dim;
+    std::unique_ptr<fpreal3[]> m_data;
+    uint2 m_dim;
   };
   return OwningSpan{std::move(data), std::move(dim)};
 }
@@ -95,46 +87,64 @@ struct Region
   }
 
   template <typename F>
-  void for_each_pixel(F&& func, const uinteger _regionScale) const noexcept
+  void for_each_pixel(F&& func, const uint2 _imageDim, const uinteger _regionScale) const noexcept
   {
     for (uinteger x = 0u; x < _regionScale; ++x)
     for (uinteger y = 0u; y < _regionScale; ++y)
     {
-      uint2 local {x, y};
-      func(getPixelCoordFromLocal(local), local);
+      uint2 localCoord {x,y};
+      auto local = localCoord.y * _regionScale + localCoord.x;
+      auto pixelCoord = getPixelCoordFromLocal(localCoord);
+      auto pixel = pixelCoord.y * _imageDim.x + pixelCoord.x;
+      func(pixel, local);
     }
   }
 };
 
 
-auto generateRegions(const uint2 _imageDim, const uinteger _regionScale)
+auto generateRegions(const uint2 _imageDim, const uinteger _regionScale, const fpreal* const _albedoIntensities)
 {
-  uint2 regionDim {_imageDim.x - _regionScale +1, _imageDim.y - _regionScale +1};
-  auto numRegions = regionDim.x * regionDim.y;
-  auto regionSize = _regionScale * _regionScale;
-  std::unique_ptr<Region[]> regions(new Region[numRegions]);
+  // Number of regions in each axis, is equivalent to the size of the image in those axis A,
+  // minus the last index within a Region (R-1)
+  // N = A - (R - 1) <=> N = A - R + 1
+  uint2 numRegions {_imageDim.x - _regionScale +1, _imageDim.y - _regionScale +1};
+  // Store the total number of regions in the image
+  auto totalNumRegions = numRegions.x * numRegions.y;
+  // Number of pixels contained within a region
+  auto numPixelsInRegion = _regionScale * _regionScale;
+  // Allocate storage for the regions
+  auto regions = std::make_unique<Region[]>(totalNumRegions);
+  // Pixel regions contains a list of regions per pixel, which contain the pixel
   auto pixelRegions = std::make_unique<std::vector<Region*>[]>(_imageDim.x * _imageDim.y);
-  auto regionPtr = regions.get();
 
-  for (uinteger x = 0u; x < regionDim.x; ++x) 
-  for (uinteger y = 0u; y < regionDim.y; ++y)
+  for (uinteger x = 0u; x < numRegions.x; ++x) 
+  for (uinteger y = 0u; y < numRegions.y; ++y)
   {
-    auto newRegionPtr = regionPtr + (y * regionDim.x + x);
-    new(newRegionPtr) Region{{x, y}, std::make_unique<fpreal[]>(regionSize)};
+    // Construct our region
+    auto&& region = regions[y * numRegions.x + x];
+    region =  Region{{x, y}, std::make_unique<fpreal[]>(numPixelsInRegion)};
+    // For every pixel in the region, we push a pointer to this region, into their pixelRegion list
     for (uinteger px = x; px < x + _regionScale; ++px)
     for (uinteger py = y; py < y + _regionScale; ++py)
     {
-      pixelRegions[py * _imageDim.x + px].push_back(newRegionPtr);
+      pixelRegions[py * _imageDim.x + px].push_back(&region);
     }
+    // Init the albedo for our new region
+    region.for_each_pixel([&](auto pixel, auto local)
+        {
+          region.m_albedoIntensities[local] = _albedoIntensities[pixel];
+        },
+        _imageDim, _regionScale
+    );
   }
-  // return an owning span, 
+  // return our regions, and pixel regions 
   struct RegionData
   {
     decltype(regions) m_regions;
     decltype(pixelRegions) m_pixelRegions;
-    decltype(regionDim) m_dim;
+    decltype(numRegions) m_dim;
   };
-  return RegionData{std::move(regions), std::move(pixelRegions), std::move(regionDim)};
+  return RegionData{std::move(regions), std::move(pixelRegions), std::move(numRegions)};
 }
 
 template <typename T>
@@ -164,12 +174,34 @@ uinteger hashChroma(fpreal3 _chroma, fpreal3 _max, uinteger _slots) noexcept
   return y * last + x;
 }
 
+std::unique_ptr<fpreal3[]> calculateChroma(span<const fpreal3> _sourceImage, span<const fpreal> _intensity) 
+{
+  auto size = _sourceImage.size();
+  // {r/i, g/i, 3 - r/i - g/i}
+  auto chroma = std::make_unique<fpreal3[]>(size);
+  for (uinteger i = 0; i < size; ++i) 
+  {
+    chroma[i].r = _sourceImage[i].r / _intensity[i];
+    chroma[i].g = _sourceImage[i].g / _intensity[i];
+    chroma[i].b = 3.0f - chroma[i].r - chroma[i].g;
+  }
+  return chroma;
+}
+
+template <typename T>
+auto makeSpan(std::unique_ptr<T[]>& _data, uinteger _size)
+{
+  return span<T>{_data.get(), std::move(_size)};
+}
+
 }
 
 int main()
 {
   // Read the source image in as an array of rgbf
-  auto [source, dim] = readImage("images/paper.png");
+  auto imgResult = readImage("images/rust.png");
+  auto&& source = imgResult.m_data;
+  auto&& dim = imgResult.m_dim;
   auto size = dim.x * dim.y;
   // Remove highlights and shadows
   for (uinteger i = 0; i < size; ++i) source[i] = glm::clamp(source[i], fpreal3(25.f / 255.f), fpreal3(235.f / 255.f));
@@ -178,43 +210,26 @@ int main()
   auto intensity = std::make_unique<fpreal[]>(size);
   for (uinteger i = 0; i < size; ++i) intensity[i] = (source[i].x + source[i].y + source[i].z) * third;
 
-  // Extract the chroma of the image using out intensity
-  // {r/i, g/i, 3 - r/i - g/i}
-  auto chroma = std::make_unique<fpreal3[]>(size);
-  for (uinteger i = 0; i < size; ++i) 
-  {
-    chroma[i].r = source[i].r / intensity[i];
-    chroma[i].g = source[i].g / intensity[i];
-    chroma[i].b = 3.0f - chroma[i].r - chroma[i].g;
-  }
-  // Our shading intensity defaults to one, so that albedo intensity can be = intensity
+  // Extract the chroma of the image using our intensity
+  auto chroma = calculateChroma(makeSpan(source, size), makeSpan(intensity, size));
+  // Our shading intensity defaults to one, so albedo intensity = source intensity
   // i = si * ai
-  auto shadingIntensity = std::make_unique<fpreal[]>(size);
-  for (uinteger i = 0; i < size; ++i) shadingIntensity[i] = 1.0f;
-  auto albedoIntensity  = std::make_unique<fpreal[]>(size);
-  for (uinteger i = 0; i < size; ++i) albedoIntensity[i] = intensity[i];
+  auto albedoIntensity = std::make_unique<fpreal[]>(size);
+  std::memcpy(albedoIntensity.get(), intensity.get(), sizeof(albedoIntensity[0]) * size);
 
-  // Divide our images into regions, we store the regions as coordinates,
-  // as we know the width and height is the same for each
+  // Divide our images into regions, 
+  // we store the regions using pixel coordinates that represent their top left pixel.
+  // We know the width and height is the same for each
   const uinteger regionScale = 20u;
   const uinteger regionSize  = regionScale * regionScale;
-  auto [regions, pixelRegions, regionDim] = generateRegions(dim, regionScale);
+  auto regionResult = generateRegions(dim, regionScale, albedoIntensity.get());
+  auto&& regions = regionResult.m_regions;
+  auto&& pixelRegions = regionResult.m_pixelRegions;
+  auto&& regionDim = regionResult.m_dim;
   auto numRegions = regionDim.x * regionDim.y;
-
   std::cout<<"Regions Complete.\n";
-    for (uinteger i = 0u; i < numRegions; ++i) 
-    {
-      regions[i].for_each_pixel([&](uint2 _coord, uint2 _regionLocalCoord)
-          {
-            auto pixelId = _coord.y * dim.x + _coord.x;
-            auto id = _regionLocalCoord.y * regionScale + _regionLocalCoord.x;
-            regions[i].m_albedoIntensities[id] = albedoIntensity[pixelId];
-          },
-          regionScale
-      );
-    }
 
-  for (int iter = 0; iter < 10; ++iter)
+  for (int iter = 0; iter < 4; ++iter)
   {
 
     // For each region
@@ -231,35 +246,31 @@ int main()
       // maximum chroma value for quantization
       auto regionChromas = std::make_unique<fpreal3[]>(regionSize);
       auto maxChroma = fpreal3(0.f);
-      region.for_each_pixel([&](uint2 _coord, uint2 _regionLocalCoord)
+      region.for_each_pixel([&](auto pixel, auto local)
           {
-            auto chromaVal = chroma[_coord.y * dim.x + _coord.x];
-            auto regionPx = _regionLocalCoord.y * regionScale + _regionLocalCoord.x;
-            regionChromas[regionPx] = chromaVal;
+            auto chromaVal = chroma[pixel];
+            regionChromas[local] = chromaVal;
             maxChroma = glm::max(maxChroma, chromaVal);
           },
-          regionScale
+          dim, regionScale
       );
       
       // Now we hash our copied chroma values
-      region.for_each_pixel([&](uint2 _coord, uint2 _regionLocalCoord)
+      region.for_each_pixel([&](auto, auto local)
           {
-            auto regionPx = _regionLocalCoord.y * regionScale + _regionLocalCoord.x;
-            auto qChromaHash = hashChroma(std::move(regionChromas[regionPx]), maxChroma, numSlots);
-            quantizedChromas[qChromaHash].push_back(_regionLocalCoord);
+            auto qChromaHash = hashChroma(std::move(regionChromas[local]), maxChroma, numSlots);
+            quantizedChromas[qChromaHash].emplace_back(local % regionScale, local / regionScale);
           },
-          regionScale
+          dim, regionScale
       );
 
       // Average the shading intensity
       fpreal shadingIntensitySum(0.0f);
-      region.for_each_pixel([&](uint2 _coord, uint2 _regionLocalCoord)
+      region.for_each_pixel([&](auto pixel, auto local)
           {
-            auto id = _coord.y * dim.x + _coord.x;
-            auto regionId = _regionLocalCoord.y * regionScale + _regionLocalCoord.x;
-            shadingIntensitySum += (intensity[id] / region.m_albedoIntensities[regionId]);
+            shadingIntensitySum += (intensity[pixel] / region.m_albedoIntensities[local]);
           },
-          regionScale
+          dim, regionScale
       );
       auto shadingIntensityAverageRecip = shadingIntensitySum * (1.0f / regionSize);
 
@@ -279,13 +290,11 @@ int main()
         }
       }
 
-      region.for_each_pixel([&](uint2 _coord, uint2 _regionLocalCoord)
+      region.for_each_pixel([&](auto, auto local)
           {
-            auto id = _coord.y * dim.x + _coord.x;
-            auto regionId = _regionLocalCoord.y * regionScale + _regionLocalCoord.x;
-            region.m_albedoIntensities[regionId] = commonChromaIntensitySums[regionId] * shadingIntensityAverageRecip;
+            region.m_albedoIntensities[local] = commonChromaIntensitySums[local] * shadingIntensityAverageRecip;
           },
-          regionScale
+          dim, regionScale
       );
     }
     std::cout<<"Maximisation Complete.\n";
@@ -308,14 +317,9 @@ int main()
       }
     }
     std::cout<<"Expectation Complete.\n";
-#if DEBUG_OUTPUT_CONVERGENCE
-    std::filesystem::create_directory("test");
-    auto nom = std::string("test/foo_0") + std::to_string(iter) + ".ppm";
-    std::cout<<nom<<'\n';
-    writeImage(nom, nonstd::span<const fpreal>{albedoIntensity.get(), size}, &dim.x);
-#endif //DEBUG_OUTPUT_CONVERGENCE
   }
 
+  auto shadingIntensity = std::make_unique<fpreal[]>(size);
   for (uinteger i = 0; i < size; ++i) 
   {
     shadingIntensity[i] = intensity[i] / albedoIntensity[i];
@@ -325,14 +329,15 @@ int main()
   {
     albedo[i] = source[i] / shadingIntensity[i];
   }
+  // Shading map is adjusted to use a 0.5 neutral rather than 1.0
+  // This makes the shading detail much easier to view
   for (uinteger i = 0; i < size; ++i) 
   {
     shadingIntensity[i] *= 0.5f;
   }
 
 
-  writeImage("albedoDump.ppm", nonstd::span<const fpreal3>{albedo.get(), size}, &dim.x);
-  writeImage("shadingDump.ppm", nonstd::span<const fpreal>{shadingIntensity.get(), size}, &dim.x);
-  writeImage("pDump.ppm", nonstd::span<const fpreal>{albedoIntensity.get(), size}, &dim.x);
+  writeImage( "albedoDump.png", makeSpan(albedo, size), &dim.x);
+  writeImage("shadingDump.png", makeSpan(shadingIntensity, size), &dim.x);
   return 0;
 }
