@@ -203,6 +203,7 @@ inline static auto getParser()
   ("h,help", "Print help")
   ("s,source", "Source file name", cxxopts::value<std::string>())
   ("i,iterations", "Seperation iterations", cxxopts::value<uinteger>()->default_value("3"))
+  ("r,region", "Region scale", cxxopts::value<uinteger>()->default_value("20"))
   ("o,output", "Output file name (no extension)", cxxopts::value<std::string>()->default_value("shading"))
   ("f,format", "Output file format (the extension)", cxxopts::value<std::string>()->default_value("png"))
   ;
@@ -243,7 +244,7 @@ int main(int argc, char* argv[])
   // Divide our images into regions, 
   // we store the regions using pixel coordinates that represent their top left pixel.
   // We know the width and height is the same for each
-  const uinteger regionScale = 20u;
+  const uinteger regionScale = args["region"].as<uinteger>();
   const uinteger regionSize  = regionScale * regionScale;
   auto regionResult = generateRegions(imageDim, regionScale, albedoIntensity.get());
   auto&& regions = regionResult.m_regions;
