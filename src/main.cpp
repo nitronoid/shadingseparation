@@ -198,7 +198,7 @@ auto makeSpan(std::unique_ptr<T[]>& _data, uinteger _size)
 
 inline static auto getParser()
 {
-  cxxopts::Options parser("Pathtracer", "Jack's implementation of smallpt.");
+  cxxopts::Options parser("Shading Separator", "Implementation of microsofts Appgen");
   parser.allow_unrecognised_options().add_options()
   ("h,help", "Print help")
   ("s,source", "Source file name", cxxopts::value<std::string>())
