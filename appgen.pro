@@ -24,7 +24,6 @@ DEPS = $$system(ls $${DEPPATH})
     INCLUDEPATH += $${DEPPATH}/$${d}/include
   }
 }
-message($${INCLUDEPATH})
 
 HEADERS += $$files(include/*.h, true)
 SOURCES += $$files(src/*.cpp, true)

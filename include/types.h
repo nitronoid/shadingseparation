@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef INCLUDED_TYPES_H
+#define INCLUDED_TYPES_H
 
 #include <cstdint>
 #include <vec2.hpp>
@@ -7,6 +7,7 @@
 #include <vec4.hpp>
 #include <nonstd/span.hpp>
 #include <nonstd/string_view.hpp>
+#include <memory>
 
 using fpreal = float;
 using fpreal2 = glm::tvec2<fpreal>;
@@ -23,6 +24,7 @@ using uint2 = glm::tvec2<uinteger>;
 using uint3 = glm::tvec3<uinteger>;
 using uint4 = glm::tvec4<uinteger>;
 
-using namespace nonstd;
+using nonstd::span;
+using nonstd::string_view;
 
-#endif //TYPES_H
+#endif //INCLUDED_TYPES_H
