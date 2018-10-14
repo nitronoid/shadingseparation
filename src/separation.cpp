@@ -9,9 +9,8 @@ BEGIN_AUTOTEXGEN_NAMESPACE
 
 // Define our hashing algorithm as quantization of r and g into slots,
 // to give slots^2 possible chroma values
-uinteger hashChroma(const fpreal3 _chroma,
-                    const fpreal3 _max,
-                    const uinteger _slots) noexcept
+uinteger
+hashChroma(const fpreal3 _chroma, const fpreal3 _max, const uinteger _slots) noexcept
 {
   auto last  = _slots - 1;
   uinteger x = (_chroma.x / _max.x) * last;
@@ -59,15 +58,10 @@ calculateCommonChromaIntensitySums(const Region& _region,
                                    const uinteger _regionScale)
 {
   static const uinteger numUniqueChromas = _numSlots * _numSlots;
-  auto quantizedChromaData =
-    std::make_unique<std::vector<uint2>[]>(numUniqueChromas);
-  auto quantizedChromas = makeSpan(quantizedChromaData, numUniqueChromas);
-  quantizeChromas(_region,
-                  quantizedChromas,
-                  _chroma,
-                  _numSlots,
-                  _imageDimensions,
-                  _regionScale);
+  auto quantizedChromaData = std::make_unique<std::vector<uint2>[]>(numUniqueChromas);
+  auto quantizedChromas    = makeSpan(quantizedChromaData, numUniqueChromas);
+  quantizeChromas(
+    _region, quantizedChromas, _chroma, _numSlots, _imageDimensions, _regionScale);
 
   auto commonChromaIntensitySums =
     std::make_unique<fpreal[]>(_regionScale * _regionScale);
@@ -82,8 +76,7 @@ calculateCommonChromaIntensitySums(const Region& _region,
     auto averageChromaIntensity = sum / static_cast<fpreal>(qChroma.size());
     for (auto&& rpx : qChroma)
     {
-      commonChromaIntensitySums[rpx.y * _regionScale + rpx.x] =
-        averageChromaIntensity;
+      commonChromaIntensitySums[rpx.y * _regionScale + rpx.x] = averageChromaIntensity;
     }
   }
   return commonChromaIntensitySums;
@@ -106,8 +99,7 @@ void calcExpectedAlbedoIntensity(span<fpreal> io_albedoIntensity,
         *rptr->getAlbedoIntensity(pixelId, _imageDimensions, _regionScale);
     }
     // Store the albedo intensity for the current pixel
-    io_albedoIntensity[pixelId] =
-      totalAlbedoIntensity / _pixelRegions[pixelId].size();
+    io_albedoIntensity[pixelId] = totalAlbedoIntensity / _pixelRegions[pixelId].size();
     for (auto rptr : _pixelRegions[pixelId])
     {
       // Update the stored albedo intensity for each region
@@ -132,9 +124,8 @@ void seperateShading(const span<fpreal3> _sourceImage,
   // intensity i = si * ai
   // //TODO: Do not default construct
   auto albedoIntensity = std::make_unique<fpreal[]>(numPixels);
-  std::memcpy(albedoIntensity.get(),
-              intensity.get(),
-              sizeof(albedoIntensity[0]) * numPixels);
+  std::memcpy(
+    albedoIntensity.get(), intensity.get(), sizeof(albedoIntensity[0]) * numPixels);
 
   // Divide our images into regions,
   // we store the regions using pixel coordinates that represent their top left
@@ -171,8 +162,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
       fpreal shadingIntensitySum(0.0f);
       region.for_each_pixel(
         [&](auto pixel, auto local) {
-          shadingIntensitySum +=
-            (intensity[pixel] / region.m_albedoIntensities[local]);
+          shadingIntensitySum += (intensity[pixel] / region.m_albedoIntensities[local]);
         },
         _imageDimensions,
         _regionScale);

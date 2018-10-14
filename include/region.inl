@@ -1,8 +1,8 @@
 
 template <typename F>
 void Region::for_each_pixel(F&& _func,
-                    const uint2 _imageDim,
-                    const uinteger _regionScale) const noexcept
+                            const uint2 _imageDim,
+                            const uinteger _regionScale) const noexcept
 {
   for (uinteger x = 0u; x < _regionScale; ++x)
     for (uinteger y = 0u; y < _regionScale; ++y)

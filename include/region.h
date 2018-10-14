@@ -19,10 +19,8 @@ struct Region
                              const uinteger _regionScale);
 
   template <typename F>
-  void for_each_pixel(F&& _func,
-                      const uint2 _imageDim,
-                      const uinteger _regionScale) const noexcept;
-  
+  void for_each_pixel(F&& _func, const uint2 _imageDim, const uinteger _regionScale) const
+    noexcept;
 };
 
 struct RegionData

@@ -8,9 +8,8 @@
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
-uinteger hashChroma(const fpreal3 _chroma,
-                    const fpreal3 _max,
-                    const uinteger _slots) noexcept;
+uinteger
+hashChroma(const fpreal3 _chroma, const fpreal3 _max, const uinteger _slots) noexcept;
 
 void quantizeChromas(const Region& _region,
                      span<std::vector<uint2>> o_quantizedChromas,

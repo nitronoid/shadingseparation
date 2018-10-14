@@ -1,7 +1,5 @@
 template <typename T>
-void writeImage(const string_view _filename,
-                const span<T> _data,
-                const uint2 _imageDim)
+void writeImage(const string_view _filename, const span<T> _data, const uint2 _imageDim)
 {
   std::cout << "Writing image to " << _filename << '\n';
   // OpenImageIO namespace
@@ -12,8 +10,7 @@ void writeImage(const string_view _filename,
       ptr->close();
       delete ptr;
     });
-  ImageSpec is(
-    _imageDim.x, _imageDim.y, sizeof(T) / sizeof(fpreal), TypeDesc::FLOAT);
+  ImageSpec is(_imageDim.x, _imageDim.y, sizeof(T) / sizeof(fpreal), TypeDesc::FLOAT);
   output->open(_filename.data(), is);
   output->write_image(TypeDesc::FLOAT, _data.data());
 }
@@ -37,8 +34,7 @@ auto readImage(const string_view _filename)
   auto data = std::make_unique<T[]>(dim.x * dim.y);
   // Read the data into our array, with a specified stride of how many floats
   // the user requested, i.e. for fpreal3 we ignore the alpha channel
-  input->read_image(
-    TypeDesc::FLOAT, data.get(), sizeof(T), AutoStride, AutoStride);
+  input->read_image(TypeDesc::FLOAT, data.get(), sizeof(T), AutoStride, AutoStride);
 
   // return an owning span
   struct OwningSpan

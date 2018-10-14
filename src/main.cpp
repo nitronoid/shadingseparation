@@ -11,8 +11,7 @@ namespace
 {
 inline static auto getParser()
 {
-  cxxopts::Options parser("Shading Separator",
-                          "Implementation of microsofts Appgen");
+  cxxopts::Options parser("Shading Separator", "Implementation of microsofts Appgen");
   // clang-format off
   parser.allow_unrecognised_options().add_options() 
     ("h,help", "Print help") 
@@ -55,11 +54,11 @@ int main(int argc, char* argv[])
 
   // Split out the albedo and shading from the source image
   atg::seperateShading(sourceImage,
-                  albedo.get(),
-                  shadingIntensity.get(),
-                  imageDimensions,
-                  args["region"].as<atg::uinteger>(),
-                  args["iterations"].as<atg::uinteger>());
+                       albedo.get(),
+                       shadingIntensity.get(),
+                       imageDimensions,
+                       args["region"].as<atg::uinteger>(),
+                       args["iterations"].as<atg::uinteger>());
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0
   // This makes the shading detail much easier to view
@@ -68,10 +67,10 @@ int main(int argc, char* argv[])
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();
   atg::writeImage(outputPrefix + "_albedo." + extension,
-             atg::makeSpan(albedo, numPixels),
-             imageDimensions);
+                  atg::makeSpan(albedo, numPixels),
+                  imageDimensions);
   atg::writeImage(outputPrefix + "_shading." + extension,
-             atg::makeSpan(shadingIntensity, numPixels),
-             imageDimensions);
+                  atg::makeSpan(shadingIntensity, numPixels),
+                  imageDimensions);
   return 0;
 }

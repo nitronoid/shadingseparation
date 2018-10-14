@@ -15,14 +15,12 @@ std::unique_ptr<fpreal3[]> calculateChroma(const span<fpreal3> _sourceImage,
                                            const span<fpreal> _intensity);
 
 template <typename T>
-void writeImage(const string_view _filename,
-                const span<T> _data,
-                const uint2 _imageDim);
+void writeImage(const string_view _filename, const span<T> _data, const uint2 _imageDim);
 
 template <typename T>
 auto readImage(const string_view _filename);
 
-#include "image_util.inl" //template definitions
+#include "image_util.inl"  //template definitions
 
 END_AUTOTEXGEN_NAMESPACE
 
