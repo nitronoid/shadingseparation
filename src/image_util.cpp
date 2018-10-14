@@ -2,6 +2,8 @@
 
 #include <glm/common.hpp>
 
+BEGIN_AUTOTEXGEN_NAMESPACE
+
 void clampExtremeties(span<fpreal3> io_image)
 {
   // TODO: take caps as input
@@ -9,9 +11,10 @@ void clampExtremeties(span<fpreal3> io_image)
   static const fpreal3 shadowCap(25.f / 255.f);
   static const fpreal3 highlightCap(235.f / 255.f);
   for (auto&& pixel : io_image)
-  { pixel = glm::clamp(pixel, shadowCap, highlightCap); } }
+  { pixel = glm::clamp(pixel, shadowCap, highlightCap); } 
+}
 
-std::unique_ptr<fpreal[]> calculateIntensity(span<fpreal3> _image)
+std::unique_ptr<fpreal[]> calculateIntensity(const span<fpreal3> _image)
 {
   auto numPixels = _image.size();
   // Extract the intensity as the average of rgb
@@ -26,8 +29,8 @@ std::unique_ptr<fpreal[]> calculateIntensity(span<fpreal3> _image)
   return intensity;
 }
 
-std::unique_ptr<fpreal3[]> calculateChroma(span<const fpreal3> _sourceImage,
-                                           span<const fpreal> _intensity)
+std::unique_ptr<fpreal3[]> calculateChroma(const span<fpreal3> _sourceImage,
+                                           const span<fpreal> _intensity)
 {
   auto size = _sourceImage.size();
   // {r/i, g/i, 3 - r/i - g/i}
@@ -40,3 +43,6 @@ std::unique_ptr<fpreal3[]> calculateChroma(span<const fpreal3> _sourceImage,
   }
   return chroma;
 }
+
+END_AUTOTEXGEN_NAMESPACE
+

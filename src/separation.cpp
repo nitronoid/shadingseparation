@@ -1,12 +1,17 @@
 #include "separation.h"
 
+#include "image_util.h"
 #include "util.h"
 
 #include <glm/common.hpp>
 
+BEGIN_AUTOTEXGEN_NAMESPACE
+
 // Define our hashing algorithm as quantization of r and g into slots,
 // to give slots^2 possible chroma values
-uinteger hashChroma(fpreal3 _chroma, fpreal3 _max, uinteger _slots) noexcept
+uinteger hashChroma(const fpreal3 _chroma,
+                    const fpreal3 _max,
+                    const uinteger _slots) noexcept
 {
   auto last  = _slots - 1;
   uinteger x = (_chroma.x / _max.x) * last;
@@ -16,7 +21,7 @@ uinteger hashChroma(fpreal3 _chroma, fpreal3 _max, uinteger _slots) noexcept
 
 void quantizeChromas(const Region& _region,
                      span<std::vector<uint2>> o_quantizedChromas,
-                     span<fpreal3> _chromas,
+                     const span<fpreal3> _chromas,
                      const uinteger _numSlots,
                      const uint2 _imageDimensions,
                      const uinteger _regionScale)
@@ -47,8 +52,8 @@ void quantizeChromas(const Region& _region,
 
 std::unique_ptr<fpreal[]>
 calculateCommonChromaIntensitySums(const Region& _region,
-                                   span<fpreal3> _chroma,
-                                   span<fpreal> _intensity,
+                                   const span<fpreal3> _chroma,
+                                   const span<fpreal> _intensity,
                                    const uinteger _numSlots,
                                    const uint2 _imageDimensions,
                                    const uinteger _regionScale)
@@ -197,3 +202,5 @@ void seperateShading(const span<fpreal3> _sourceImage,
     io_albedo[i]           = _sourceImage[i] / io_shadingIntensity[i];
   }
 }
+
+END_AUTOTEXGEN_NAMESPACE

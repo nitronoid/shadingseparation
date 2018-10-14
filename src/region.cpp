@@ -1,11 +1,13 @@
 #include "region.h"
 
+BEGIN_AUTOTEXGEN_NAMESPACE
+
 uint2 Region::getPixelCoordFromLocal(uint2 _coord) const noexcept
 {
   return {m_startPixel.x + _coord.x, m_startPixel.y + _coord.y};
 }
 
-fpreal* Region::getAlbedoIntensity(uinteger _id,
+fpreal* Region::getAlbedoIntensity(const uinteger _id,
                                    const uint2 _imageDim,
                                    const uinteger _regionScale)
 {
@@ -56,3 +58,6 @@ RegionData generateRegions(const uint2 _imageDim,
   // return our regions, and pixel regions
   return r;
 }
+
+END_AUTOTEXGEN_NAMESPACE
+

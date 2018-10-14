@@ -14,13 +14,13 @@ inline static auto getParser()
   cxxopts::Options parser("Shading Separator",
                           "Implementation of microsofts Appgen");
   // clang-format off
-  parser.allow_unrecognised_options ().add_options () 
+  parser.allow_unrecognised_options().add_options() 
     ("h,help", "Print help") 
-    ("s,source", "Source file name", cxxopts::value<std::string> ()) 
+    ("s,source", "Source file name", cxxopts::value<std::string>()) 
     ("o,output", "Output file name (no extension)",    cxxopts::value<std::string>()->default_value("shading")) 
     ("f,format", "Output file format (the extension)", cxxopts::value<std::string>()->default_value("png")) 
-    ("r,region", "Region scale", cxxopts::value<uinteger>()->default_value ("20")) 
-    ("i,iterations", "Seperation iterations", cxxopts::value<uinteger>()->default_value ("3"))
+    ("r,region", "Region scale", cxxopts::value<atg::uinteger>()->default_value("20")) 
+    ("i,iterations", "Seperation iterations", cxxopts::value<atg::uinteger>()->default_value("3"))
     ;
   // clang-format on
   return parser;
@@ -40,40 +40,38 @@ int main(int argc, char* argv[])
   }
 
   // Read the source image in as an array of rgbf
-  auto imgResult         = readImage<fpreal3>(args["source"].as<std::string>());
+  auto imgResult         = atg::readImage<atg::fpreal3>(args["source"].as<std::string>());
   auto&& sourceImageData = imgResult.m_data;
   auto&& imageDimensions = imgResult.m_imageDim;
   auto numPixels         = imageDimensions.x * imageDimensions.y;
-  auto sourceImage       = makeSpan(sourceImageData, numPixels);
+  auto sourceImage       = atg::makeSpan(sourceImageData, numPixels);
 
   // Remove the extreme highlights and shadows by clamping intense pixels
-  clampExtremeties(sourceImage);
+  atg::clampExtremeties(sourceImage);
 
   // Allocated arrays to store the resulting textures
-  auto albedo           = std::make_unique<fpreal3[]>(numPixels);
-  auto shadingIntensity = std::make_unique<fpreal[]>(numPixels);
+  auto albedo           = std::make_unique<atg::fpreal3[]>(numPixels);
+  auto shadingIntensity = std::make_unique<atg::fpreal[]>(numPixels);
 
-  const uinteger regionScale = args["region"].as<uinteger>();
-  const auto maxIter         = args["iterations"].as<uinteger>();
   // Split out the albedo and shading from the source image
-  seperateShading(sourceImage,
+  atg::seperateShading(sourceImage,
                   albedo.get(),
                   shadingIntensity.get(),
                   imageDimensions,
-                  regionScale,
-                  maxIter);
+                  args["region"].as<atg::uinteger>(),
+                  args["iterations"].as<atg::uinteger>());
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0
   // This makes the shading detail much easier to view
-  for (uinteger i = 0; i < numPixels; ++i) shadingIntensity[i] *= 0.5f;
+  for (atg::uinteger i = 0; i < numPixels; ++i) shadingIntensity[i] *= 0.5f;
 
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();
-  writeImage(outputPrefix + "_albedo." + extension,
-             makeSpan(albedo, numPixels),
+  atg::writeImage(outputPrefix + "_albedo." + extension,
+             atg::makeSpan(albedo, numPixels),
              imageDimensions);
-  writeImage(outputPrefix + "_shading." + extension,
-             makeSpan(shadingIntensity, numPixels),
+  atg::writeImage(outputPrefix + "_shading." + extension,
+             atg::makeSpan(shadingIntensity, numPixels),
              imageDimensions);
   return 0;
 }

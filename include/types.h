@@ -10,6 +10,8 @@
 #include <vec3.hpp>
 #include <vec4.hpp>
 
+BEGIN_AUTOTEXGEN_NAMESPACE
+
 using fpreal  = float;
 using fpreal2 = glm::tvec2<fpreal>;
 using fpreal3 = glm::tvec3<fpreal>;
@@ -27,5 +29,7 @@ using uint4    = glm::tvec4<uinteger>;
 
 using nonstd::span;
 using nonstd::string_view;
+
+END_AUTOTEXGEN_NAMESPACE
 
 #endif  // INCLUDED_TYPES_H

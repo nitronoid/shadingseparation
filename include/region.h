@@ -5,6 +5,8 @@
 
 #include <vector>
 
+BEGIN_AUTOTEXGEN_NAMESPACE
+
 struct Region
 {
   uint2 m_startPixel;
@@ -12,25 +14,15 @@ struct Region
 
   uint2 getPixelCoordFromLocal(uint2 _coord) const noexcept;
 
-  fpreal* getAlbedoIntensity(uinteger _id,
+  fpreal* getAlbedoIntensity(const uinteger _id,
                              const uint2 _imageDim,
                              const uinteger _regionScale);
 
   template <typename F>
-  void for_each_pixel(F&& func,
+  void for_each_pixel(F&& _func,
                       const uint2 _imageDim,
-                      const uinteger _regionScale) const noexcept
-  {
-    for (uinteger x = 0u; x < _regionScale; ++x)
-      for (uinteger y = 0u; y < _regionScale; ++y)
-      {
-        uint2 localCoord{x, y};
-        auto local      = localCoord.y * _regionScale + localCoord.x;
-        auto pixelCoord = getPixelCoordFromLocal(localCoord);
-        auto pixel      = pixelCoord.y * _imageDim.x + pixelCoord.x;
-        func(pixel, local);
-      }
-  }
+                      const uinteger _regionScale) const noexcept;
+  
 };
 
 struct RegionData
@@ -42,5 +34,9 @@ struct RegionData
 RegionData generateRegions(const uint2 _imageDim,
                            const uinteger _regionScale,
                            const fpreal* const _albedoIntensities);
+
+#include "region.inl"
+
+END_AUTOTEXGEN_NAMESPACE
 
 #endif  // INCLUDED_REGION_H

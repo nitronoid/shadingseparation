@@ -33,6 +33,12 @@ LIBS += -ltbb -lstdc++fs -lOpenImageIO
 DEFINES += GLM_ENABLE_EXPERIMENTAL GLM_FORCE_CTOR_INIT
 DEFINES += DEBUG_OUTPUT_CONVERGENCE=0
 
+AUTOTEXGEN_NAMESPACE =atg
+QMAKE_CXXFLAGS += \
+  -DAUTOTEXGEN_NAMESPACE=\"$${AUTOTEXGEN_NAMESPACE}\" \
+  -DEND_AUTOTEXGEN_NAMESPACE="}" \
+  -DBEGIN_AUTOTEXGEN_NAMESPACE=\"namespace $${AUTOTEXGEN_NAMESPACE} {\"
+
 QMAKE_CXXFLAGS += -std=c++14 -g
 QMAKE_CXXFLAGS += -Ofast -msse -msse2 -msse3 -march=native -fopenmp -frename-registers -funroll-loops 
 QMAKE_CXXFLAGS += -Wall -Wextra -pedantic-errors
