@@ -11,7 +11,8 @@ namespace
 {
 inline static auto getParser()
 {
-  cxxopts::Options parser("Shading Separator", "Implementation of microsofts Appgen");
+  cxxopts::Options parser("Shading Separator",
+                          "Implementation of microsofts Appgen");
   // clang-format off
   parser.allow_unrecognised_options().add_options() 
     ("h,help", "Print help") 
@@ -39,7 +40,8 @@ int main(int argc, char* argv[])
   }
 
   // Read the source image in as an array of rgbf
-  auto imgResult         = atg::readImage<atg::fpreal3>(args["source"].as<std::string>());
+  auto imgResult =
+    atg::readImage<atg::fpreal3>(args["source"].as<std::string>());
   auto&& sourceImageData = imgResult.m_data;
   auto&& imageDimensions = imgResult.m_imageDim;
   auto numPixels         = imageDimensions.x * imageDimensions.y;
@@ -72,7 +74,6 @@ int main(int argc, char* argv[])
   atg::writeImage(outputPrefix + "_shading." + extension,
                   atg::makeSpan(shadingIntensity, numPixels),
                   imageDimensions);
-
 
   return 0;
 }

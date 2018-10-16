@@ -21,7 +21,8 @@ constexpr auto average(C&& _elems) noexcept
 }
 
 template <typename T>
-static inline auto makeSpan(std::unique_ptr<T[]>& _data, uinteger _size) noexcept
+static inline auto makeSpan(std::unique_ptr<T[]>& _data,
+                            uinteger _size) noexcept
 {
   return span<T>{_data.get(), std::move(_size)};
 }
