@@ -72,5 +72,7 @@ int main(int argc, char* argv[])
   atg::writeImage(outputPrefix + "_shading." + extension,
                   atg::makeSpan(shadingIntensity, numPixels),
                   imageDimensions);
+
+
   return 0;
 }

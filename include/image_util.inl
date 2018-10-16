@@ -7,7 +7,7 @@ void writeImage(const string_view _filename, const span<T> _data, const uint2 _i
   // unique_ptr with custom deleter to close file on exit
   std::unique_ptr<ImageOutput, void (*)(ImageOutput*)> output(
     ImageOutput::create(_filename.data())
-#ifndef OLD_OIIO
+#if OIIO_VERSION >= 10900
     .release()
 #endif
     , [](auto ptr) {
@@ -27,7 +27,7 @@ auto readImage(const string_view _filename)
   // unique_ptr with custom deleter to close file on exit
   std::unique_ptr<ImageInput, void (*)(ImageInput*)> input(
     ImageInput::open(_filename.data())
-#ifndef OLD_OIIO
+#if OIIO_VERSION >= 10900
     .release()
 #endif
     , [](auto ptr) {

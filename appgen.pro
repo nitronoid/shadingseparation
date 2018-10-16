@@ -48,7 +48,7 @@ QMAKE_CXXFLAGS += -std=c++14 -g
 # Optimisation flags
 QMAKE_CXXFLAGS += -Ofast -march=native -frename-registers -funroll-loops 
 # Intrinsics flags
-QMAKE_CXXFLAGS += -mfma -mavx2 -m64 -m16 -msse -msse2 -msse3
+QMAKE_CXXFLAGS += -mfma -mavx2 -m64 -msse -msse2 -msse3
 # Enable all warnings
 QMAKE_CXXFLAGS += -Wall -Wextra -pedantic-errors
 
