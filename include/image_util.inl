@@ -6,7 +6,11 @@ void writeImage(const string_view _filename, const span<T> _data, const uint2 _i
   using namespace OIIO;
   // unique_ptr with custom deleter to close file on exit
   std::unique_ptr<ImageOutput, void (*)(ImageOutput*)> output(
-    ImageOutput::create(_filename.data()), [](auto ptr) {
+    ImageOutput::create(_filename.data())
+#ifndef OLD_OIIO
+    .release()
+#endif
+    , [](auto ptr) {
       ptr->close();
       delete ptr;
     });
@@ -22,7 +26,11 @@ auto readImage(const string_view _filename)
   using namespace OIIO;
   // unique_ptr with custom deleter to close file on exit
   std::unique_ptr<ImageInput, void (*)(ImageInput*)> input(
-    ImageInput::open(_filename.data()), [](auto ptr) {
+    ImageInput::open(_filename.data())
+#ifndef OLD_OIIO
+    .release()
+#endif
+    , [](auto ptr) {
       ptr->close();
       delete ptr;
     });

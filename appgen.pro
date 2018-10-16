@@ -4,7 +4,7 @@ TARGET = appgen
 UI_HEADERS_DIR = ui
 OBJECTS_DIR = obj
 
-QT += core 
+QT -= core gui
 CONFIG += console c++14
 CONFIG -= app_bundle gui
 
@@ -26,12 +26,16 @@ DEPS = $$system(ls $${DEPPATH})
 }
 
 HEADERS += $$files(include/*.h, true)
+HEADERS += $$files(include/*.inl, true)
 SOURCES += $$files(src/*.cpp, true)
 
-LIBS += -ltbb -lstdc++fs -lOpenImageIO
-#DEFINES += _GLIBCXX_PARALLEL
+#Linker search paths
+LIBS += -L/public/devel/2018/tbb/lib/intel64/gcc4.7
+# Linker libraries
+LIBS +=  -ltbb -lOpenImageIO
+
+DEFINES += _GLIBCXX_PARALLEL
 DEFINES += GLM_ENABLE_EXPERIMENTAL GLM_FORCE_CTOR_INIT
-DEFINES += DEBUG_OUTPUT_CONVERGENCE=0
 
 AUTOTEXGEN_NAMESPACE =atg
 QMAKE_CXXFLAGS += \
@@ -39,9 +43,16 @@ QMAKE_CXXFLAGS += \
   -DEND_AUTOTEXGEN_NAMESPACE="}" \
   -DBEGIN_AUTOTEXGEN_NAMESPACE=\"namespace $${AUTOTEXGEN_NAMESPACE} {\"
 
+# Standard flags
 QMAKE_CXXFLAGS += -std=c++14 -g
-QMAKE_CXXFLAGS += -Ofast -msse -msse2 -msse3 -march=native -fopenmp -frename-registers -funroll-loops 
+# Optimisation flags
+QMAKE_CXXFLAGS += -Ofast -march=native -frename-registers -funroll-loops 
+# Intrinsics flags
+QMAKE_CXXFLAGS += -mfma -mavx2 -m64 -m16 -msse -msse2 -msse3
+# Enable all warnings
 QMAKE_CXXFLAGS += -Wall -Wextra -pedantic-errors
 
+# Enable openmp
+QMAKE_CXXFLAGS += -fopenmp 
 QMAKE_LFLAGS += -fopenmp
 
