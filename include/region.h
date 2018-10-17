@@ -11,7 +11,7 @@ struct Region
 {
   uint2 m_startPixel;
   fpreal3 m_maxChroma;
-  std::unique_ptr<fpreal[]> m_expectedAlbedoIntensity;
+  std::unique_ptr<fpreal[]> m_estimatedAlbedoIntensity;
 
   uint2 getPixelCoordFromLocal(uint2 _coord) const noexcept;
   uint2 getLocalCoordFromPixel(uint2 _coord) const noexcept;

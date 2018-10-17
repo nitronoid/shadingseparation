@@ -37,16 +37,17 @@ RegionData generateRegions(const uint2 _imageDim,
     {
       // Construct our region
       auto&& region = r.m_regions[y * r.m_numRegions.x + x];
-      region = Region{{x, y}, fpreal3(0.0f), std::make_unique<fpreal[]>(numPixelsInRegion)};
+      region        = Region{
+        {x, y}, fpreal3(0.0f), std::make_unique<fpreal[]>(numPixelsInRegion)};
       // For every pixel in the region, we push a pointer to this region, into
       // their pixelRegion list
       for (uinteger px = x; px < x + _regionScale; ++px)
         for (uinteger py = y; py < y + _regionScale; ++py)
         { r.m_pixelRegions[py * _imageDim.x + px].push_back(&region); }
-      // Init the albedo for our new region
+        // Init the albedo for our new region
       region.for_each_pixel(
         [&](auto pixel, auto local) {
-          region.m_expectedAlbedoIntensity[local] = _albedoIntensities[pixel];
+          region.m_estimatedAlbedoIntensity[local] = _albedoIntensities[pixel];
         },
         _imageDim,
         _regionScale);
