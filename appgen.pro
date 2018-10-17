@@ -46,11 +46,13 @@ QMAKE_CXXFLAGS += \
 # Standard flags
 QMAKE_CXXFLAGS += -std=c++14 -g
 # Optimisation flags
-QMAKE_CXXFLAGS += -Ofast -march=native -frename-registers -funroll-loops 
+QMAKE_CXXFLAGS += -Ofast -march=native -frename-registers -funroll-loops -ffast-math -fassociative-math
 # Intrinsics flags
 QMAKE_CXXFLAGS += -mfma -mavx2 -m64 -msse -msse2 -msse3
 # Enable all warnings
 QMAKE_CXXFLAGS += -Wall -Wextra -pedantic-errors
+# Vectorization info
+QMAKE_CXXFLAGS += -ftree-vectorizer-verbose=2
 
 # Enable openmp
 QMAKE_CXXFLAGS += -fopenmp 
