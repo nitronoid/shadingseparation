@@ -52,7 +52,7 @@ QMAKE_CXXFLAGS += -mfma -mavx2 -m64 -msse -msse2 -msse3
 # Enable all warnings
 QMAKE_CXXFLAGS += -Wall -Wextra -pedantic-errors
 # Vectorization info
-QMAKE_CXXFLAGS += -ftree-vectorizer-verbose=2
+QMAKE_CXXFLAGS += -ftree-vectorize -ftree-vectorizer-verbose=5 
 
 # Enable openmp
 QMAKE_CXXFLAGS += -fopenmp 
