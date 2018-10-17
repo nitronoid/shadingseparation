@@ -100,19 +100,13 @@ void seperateShading(const span<fpreal3> _sourceImage,
       }
       albedoIntensity[i] = sum / pixelRegions[i].size();
     }
-
-//    calcExpectedAlbedoIntensity(makeSpan(albedoIntensity, numPixels),
-//                                makeSpan(pixelRegions, numPixels),
-//                                _imageDimensions,
-//                                _regionScale);
-//
     std::cout << "Maximisation Complete.\n";
   }
 
   for (uinteger i = 0; i < numPixels; ++i)
   {
     io_shadingIntensity[i] = intensity[i] / albedoIntensity[i];
-    io_albedo[i]           = _sourceImage[i] / io_shadingIntensity[i];
+    io_albedo[i]           = albedoIntensity[i] * chroma[i];
   }
 }
 
