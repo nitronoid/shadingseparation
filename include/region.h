@@ -10,14 +10,11 @@ BEGIN_AUTOTEXGEN_NAMESPACE
 struct Region
 {
   uint2 m_startPixel;
-  std::unique_ptr<fpreal[]> m_albedoIntensities;
+  fpreal3 m_maxChroma;
+  std::unique_ptr<fpreal[]> m_expectedAlbedoIntensity;
 
   uint2 getPixelCoordFromLocal(uint2 _coord) const noexcept;
   uint2 getLocalCoordFromPixel(uint2 _coord) const noexcept;
-
-  fpreal* getAlbedoIntensity(const uinteger _id,
-                             const uint2 _imageDim,
-                             const uinteger _regionScale);
 
   template <typename F>
   void for_each_pixel(F&& _func,

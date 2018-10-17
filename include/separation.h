@@ -12,25 +12,7 @@ uinteger hashChroma(const fpreal3 _chroma,
                     const fpreal3 _max,
                     const uinteger _slots) noexcept;
 
-void quantizeChromas(const Region& _region,
-                     span<std::vector<uint2>> o_quantizedChromas,
-                     const span<fpreal3> _chromas,
-                     const uinteger _numSlots,
-                     const uint2 _imageDimensions,
-                     const uinteger _regionScale);
-
-std::unique_ptr<fpreal[]>
-calculateCommonChromaIntensitySums(const Region& _region,
-                                   const span<fpreal3> _chroma,
-                                   const span<fpreal> _intensity,
-                                   const uinteger _numSlots,
-                                   const uint2 _imageDimensions,
-                                   const uinteger _regionScale);
-
-void calcExpectedAlbedoIntensity(span<fpreal> io_albedoIntensity,
-                                 span<std::vector<Region*>> _pixelRegions,
-                                 const uint2 _imageDimensions,
-                                 const uinteger _regionScale);
+void estimateAlbedos(Region* io_region, const fpreal* _intensity, const fpreal3* _chroma, const fpreal3 _maxChroma, const uinteger _numSlots, const uint2 _imageDimensions, const uinteger _regionScale) noexcept;
 
 void seperateShading(const span<fpreal3> _sourceImage,
                      fpreal3* io_albedo,
