@@ -16,7 +16,8 @@ constexpr auto average(C&& _elems) noexcept
 {
   using T    = remove_cvref_t<decltype(_elems[0])>;
   auto total = static_cast<T>(0);
-  for (auto&& e : _elems) total += e;
+  for (auto&& e : _elems)
+    total += e;
   return total / _elems.size();
 }
 

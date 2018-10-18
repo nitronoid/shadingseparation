@@ -29,8 +29,7 @@ struct RegionData
   uint2 m_numRegions;
 };
 RegionData generateRegions(const uint2 _imageDim,
-                           const uinteger _regionScale,
-                           const fpreal* const _albedoIntensities);
+                           const uinteger _regionScale);
 
 #include "region.inl"
 

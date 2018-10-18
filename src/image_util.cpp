@@ -10,8 +10,11 @@ void clampExtremeties(span<fpreal3> io_image)
   // Remove highlights and shadows
   static const fpreal3 shadowCap(25.f / 255.f);
   static const fpreal3 highlightCap(235.f / 255.f);
-  for (auto&& pixel : io_image)
-  { pixel = glm::clamp(pixel, shadowCap, highlightCap); } }
+  for (auto& pixel : io_image)
+  {
+    pixel = glm::clamp(pixel, shadowCap, highlightCap);
+  }
+}
 
 std::unique_ptr<fpreal[]> calculateIntensity(const span<fpreal3> _image)
 {
@@ -22,7 +25,7 @@ std::unique_ptr<fpreal[]> calculateIntensity(const span<fpreal3> _image)
   auto intensity = std::make_unique<fpreal[]>(numPixels);
   for (uinteger i = 0; i < numPixels; ++i)
   {
-    auto&& pixel = _image[i];
+    auto& pixel  = _image[i];
     intensity[i] = (pixel.x + pixel.y + pixel.z) * third;
   }
   return intensity;

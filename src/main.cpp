@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
   auto sourceImage       = atg::makeSpan(sourceImageData, numPixels);
 
   // Remove the extreme highlights and shadows by clamping intense pixels
-  atg::clampExtremeties(sourceImage);
+  //atg::clampExtremeties(sourceImage);
 
   // Allocated arrays to store the resulting textures
   auto albedo           = std::make_unique<atg::fpreal3[]>(numPixels);
@@ -64,7 +64,8 @@ int main(int argc, char* argv[])
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0
   // This makes the shading detail much easier to view
-  for (atg::uinteger i = 0; i < numPixels; ++i) shadingIntensity[i] *= 0.5f;
+  for (atg::uinteger i = 0; i < numPixels; ++i)
+    shadingIntensity[i] *= 0.5f;
 
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();

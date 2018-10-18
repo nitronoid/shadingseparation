@@ -15,10 +15,13 @@ uinteger hashChroma(const fpreal3 _chroma,
                     const fpreal3 _max,
                     const uinteger _slots) noexcept
 {
-  auto last  = _slots - 1;
-  uinteger x = (_chroma.x / _max.x) * last;
-  uinteger y = (_chroma.y / _max.y) * last;
-  return y * last + x;
+  //uinteger x = glm::max(1.0f, glm::ceil(_chroma.r * 10.f));
+  //uinteger y = glm::max(1.0f, glm::ceil(_chroma.g * 10.f));
+  //return (x - 1.f) * 20.f + y;
+   auto last  = _slots - 1;
+   uinteger x = (_chroma.x / _max.x) * last;
+   uinteger y = (_chroma.y / _max.y) * last;
+   return y * last + x;
 }
 
 void estimateAlbedoIntensities(Region* io_region,
@@ -49,11 +52,12 @@ void estimateAlbedoIntensities(Region* io_region,
 
   for (uinteger i = 0u; i < numUniqueColors; ++i)
   {
-    if (contributions[i])
-      io_region->m_estimatedAlbedoIntensity[i] /=
-        (contributions[i] * shadingIntensityAverage);
+    fpreal num = 0.0;
+    if (contributions[i] == 0u)
+      num = 0.0;
     else
-      io_region->m_estimatedAlbedoIntensity[i] = 0.0f;
+      num = io_region->m_estimatedAlbedoIntensity[i] / contributions[i];
+    io_region->m_estimatedAlbedoIntensity[i] = num / shadingIntensityAverage;
   }
 }
 
@@ -62,7 +66,9 @@ fpreal maximizeAlbedoIntensity(const std::vector<Region*>& _pixelRegion,
 {
   fpreal sum = 0.0;
   for (auto rptr : _pixelRegion)
-  { sum += rptr->m_estimatedAlbedoIntensity[_chromaId]; }
+  {
+    sum += rptr->m_estimatedAlbedoIntensity[_chromaId];
+  }
   return sum / _pixelRegion.size();
 }
 
@@ -86,8 +92,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
   // Divide our images into regions,
   // we store the regions using pixel coordinates that represent their top left
   // pixel. We know the width and height is the same for each
-  auto regionResult =
-    generateRegions(_imageDimensions, _regionScale, albedoIntensity.get());
+  auto regionResult   = generateRegions(_imageDimensions, _regionScale);
   auto&& regions      = regionResult.m_regions;
   auto&& pixelRegions = regionResult.m_pixelRegions;
   auto&& numRegionsXY = regionResult.m_numRegions;
@@ -96,13 +101,16 @@ void seperateShading(const span<fpreal3> _sourceImage,
 
   fpreal3 maxChroma(0.0f);
   for (uinteger i = 0u; i < numPixels; ++i)
-  { maxChroma = glm::max(maxChroma, chroma[i]); } const auto numSlots = 20u;
+  {
+    maxChroma = glm::max(maxChroma, chroma[i]);
+  }
+  const auto numSlots = 20u;
   for (uinteger iter = 0u; iter < _iterations; ++iter)
   {
     // For each region
     for (uinteger i = 0; i < numRegions; ++i)
     {
-      auto&& region = regions[i];
+      auto& region = regions[i];
       std::fill_n(
         region.m_estimatedAlbedoIntensity.get(), numSlots * numSlots, 0.0f);
       estimateAlbedoIntensities(&region,
