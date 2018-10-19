@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = appgen
+TARGET = atg
 
 UI_HEADERS_DIR = ui
 OBJECTS_DIR = obj
