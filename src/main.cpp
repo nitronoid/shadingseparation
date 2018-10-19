@@ -6,6 +6,9 @@
 #include <cxxopts.hpp>
 #include <iomanip>
 #include <iostream>
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+
 
 namespace
 {
@@ -64,8 +67,13 @@ int main(int argc, char* argv[])
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0
   // This makes the shading detail much easier to view
-  for (atg::uinteger i = 0; i < numPixels; ++i)
-    shadingIntensity[i] *= 0.5f;
+  tbb::parallel_for(
+      tbb::blocked_range<atg::uinteger>{0u, numPixels},
+      [&shadingIntensity] (auto&& r) { 
+        const auto end = r.end();
+        for (auto i = r.begin(); i < end; ++i) 
+          shadingIntensity[i] *= 0.5f; 
+        });
 
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();

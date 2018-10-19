@@ -1,10 +1,10 @@
 #include "separation.h"
-
 #include "image_util.h"
 #include "util.h"
 
 #include <glm/common.hpp>
-
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
 #include <alloca.h>
 
 BEGIN_AUTOTEXGEN_NAMESPACE
@@ -52,12 +52,8 @@ void estimateAlbedoIntensities(Region* io_region,
 
   for (uinteger i = 0u; i < numUniqueColors; ++i)
   {
-    fpreal num = 0.0;
-    if (contributions[i] == 0u)
-      num = 0.0;
-    else
-      num = io_region->m_estimatedAlbedoIntensity[i] / contributions[i];
-    io_region->m_estimatedAlbedoIntensity[i] = num / shadingIntensityAverage;
+    if (contributions[i])
+      io_region->m_estimatedAlbedoIntensity[i] /= (contributions[i] * shadingIntensityAverage);
   }
 }
 
@@ -123,19 +119,29 @@ void seperateShading(const span<fpreal3> _sourceImage,
                                 _regionScale);
     }
     std::cout << "Expectation Complete.\n";
-    for (uinteger i = 0u; i < numPixels; ++i)
-    {
-      auto chromaId      = hashChroma(chroma[i], maxChroma, numSlots);
-      albedoIntensity[i] = maximizeAlbedoIntensity(pixelRegions[i], chromaId);
-    }
+    tbb::parallel_for(
+        tbb::blocked_range<uinteger>{0u, numPixels},
+        [&] (auto&& r) { 
+          const auto end = r.end();
+          for (auto i = r.begin(); i < end; ++i) 
+          {
+            auto chromaId      = hashChroma(chroma[i], maxChroma, numSlots);
+            albedoIntensity[i] = maximizeAlbedoIntensity(pixelRegions[i], chromaId);
+          }});
     std::cout << "Maximisation Complete.\n";
   }
 
-  for (uinteger i = 0; i < numPixels; ++i)
-  {
-    io_shadingIntensity[i] = intensity[i] / albedoIntensity[i];
-    io_albedo[i]           = albedoIntensity[i] * chroma[i];
-  }
+  
+  // Calculate final albedo and shading maps from the seperated albedo intensity
+  tbb::parallel_for(
+      tbb::blocked_range<uinteger>{0u, numPixels},
+      [&] (auto&& r) { 
+        const auto end = r.end();
+        for (auto i = r.begin(); i < end; ++i) 
+        {
+          io_shadingIntensity[i] = intensity[i] / albedoIntensity[i];
+          io_albedo[i]           = albedoIntensity[i] * chroma[i];
+        }});
 }
 
 END_AUTOTEXGEN_NAMESPACE
