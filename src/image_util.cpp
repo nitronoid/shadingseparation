@@ -10,8 +10,8 @@ void clampExtremeties(span<fpreal3> io_image)
 {
   // TODO: take caps as input
   // Remove highlights and shadows
-  static const fpreal3 shadowCap(25.f / 255.f);
-  static const fpreal3 highlightCap(235.f / 255.f);
+  static const fpreal3 shadowCap(1.f / 255.f);
+  static const fpreal3 highlightCap(254.f / 255.f);
   for (auto& pixel : io_image)
   {
     pixel = glm::clamp(pixel, shadowCap, highlightCap);

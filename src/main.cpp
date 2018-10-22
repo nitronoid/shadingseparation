@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
   auto sourceImage       = atg::makeSpan(sourceImageData, numPixels);
 
   // Remove the extreme highlights and shadows by clamping intense pixels
-  //atg::clampExtremeties(sourceImage);
+  atg::clampExtremeties(sourceImage);
 
   // Allocated arrays to store the resulting textures
   auto albedo           = std::make_unique<atg::fpreal3[]>(numPixels);
