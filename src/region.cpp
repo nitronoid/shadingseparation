@@ -2,16 +2,6 @@
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
-uint2 Region::getPixelCoordFromLocal(uint2 _coord) const noexcept
-{
-  return {_coord.x + m_startPixel.x, _coord.y + m_startPixel.y};
-}
-
-uint2 Region::getLocalCoordFromPixel(uint2 _coord) const noexcept
-{
-  return {_coord.x - m_startPixel.x, _coord.y - m_startPixel.y};
-}
-
 RegionData generateRegions(const uint2 _imageDim,
                            const uinteger _regionScale)
 {
@@ -23,28 +13,15 @@ RegionData generateRegions(const uint2 _imageDim,
     uint2{_imageDim.x - _regionScale + 1, _imageDim.y - _regionScale + 1};
   // Store the total number of regions in the image
   auto totalNumRegions = r.m_numRegions.x * r.m_numRegions.y;
-  // Number of pixels contained within a region
-  auto numPixelsInRegion = _regionScale * _regionScale;
   // Allocate storage for the regions
   r.m_regions = std::make_unique<Region[]>(totalNumRegions);
-  // Pixel regions contains a list of regions per pixel, which contain the pixel
-  r.m_pixelRegions =
-    std::make_unique<std::vector<Region*>[]>(_imageDim.x * _imageDim.y);
 
   for (uinteger x = 0u; x < r.m_numRegions.x; ++x)
     for (uinteger y = 0u; y < r.m_numRegions.y; ++y)
     {
       // Construct our region
       auto& region = r.m_regions[y * r.m_numRegions.x + x];
-      region        = Region{
-        {x, y}, fpreal3(0.0f), std::make_unique<fpreal[]>(numPixelsInRegion)};
-      // For every pixel in the region, we push a pointer to this region, into
-      // their pixelRegion list
-      for (uinteger px = x; px < x + _regionScale; ++px)
-        for (uinteger py = y; py < y + _regionScale; ++py)
-        {
-          r.m_pixelRegions[py * _imageDim.x + px].push_back(&region);
-        }
+      region       = Region{x, y};
     }
   // return our regions, and pixel regions
   return r;
