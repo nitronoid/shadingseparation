@@ -14,6 +14,7 @@ INCLUDEPATH += \
     /usr/local/include \
     /public/devel/2018/include \
     /public/devel/2018/include/glm \
+    /public/devel/2018/tbb/include \
     $$PWD/include 
 
 DEPPATH = $$PWD/dep
