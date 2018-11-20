@@ -27,7 +27,8 @@ void seperateShading(const span<fpreal3> _sourceImage,
                      fpreal* io_shadingIntensity,
                      const uint2 _imageDimensions,
                      const uinteger _regionScale,
-                     const uinteger _iterations,
+                     const uinteger _directIterations,
+                     const uinteger _intensityIterations,
                      const uinteger _chromaSlots);
 
 END_AUTOTEXGEN_NAMESPACE
