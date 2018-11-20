@@ -50,7 +50,7 @@ void estimateAlbedoIntensities(const Region _region,
     _region,
     _imageDimensions,
     _regionScale);
-  auto shadingIntensityAverage = shadingIntensitySum / numUniqueColors;
+  auto shadingIntensityAverage = shadingIntensitySum / (_regionScale*_regionScale);
 
   for (uinteger i = 0u; i < numUniqueColors; ++i)
   {
@@ -83,7 +83,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
   auto&& regions      = regionResult.m_regions;
   auto&& numRegionsXY = regionResult.m_numRegions;
   auto numRegions     = numRegionsXY.x * numRegionsXY.y;
-  std::cout << "Regions Complete.\n";
+  std::cout << numRegions << "Regions Complete.\n";
 
   fpreal3 maxChroma(0.0f);
   for (uinteger i = 0u; i < numPixels; ++i)
@@ -111,15 +111,15 @@ void seperateShading(const span<fpreal3> _sourceImage,
                                 numSlots,
                                 _imageDimensions,
                                 _regionScale);
-  for_each_local_pixel(
-    [&](auto pixel, auto) {
-      auto chromaId      = hashChroma(chroma[pixel], maxChroma, numSlots);
-      interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
-      pixelContributions[pixel]++;
-    },
-    region,
-    _imageDimensions,
-    _regionScale);
+      for_each_local_pixel(
+        [&](auto pixel, auto) {
+          auto chromaId      = hashChroma(chroma[pixel], maxChroma, numSlots);
+          interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
+          pixelContributions[pixel]++;
+        },
+        region,
+        _imageDimensions,
+        _regionScale);
     }
     std::cout << "Expectation Complete.\n";
     tbb::parallel_for(
