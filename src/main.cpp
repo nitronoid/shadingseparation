@@ -22,7 +22,8 @@ inline static auto getParser()
     ("s,source", "Source file name", cxxopts::value<std::string>()) 
     ("o,output", "Output file name (no extension)",    cxxopts::value<std::string>()->default_value("shading")) 
     ("f,format", "Output file format (the extension)", cxxopts::value<std::string>()->default_value("png")) 
-    ("r,region", "Region scale", cxxopts::value<atg::uinteger>()->default_value("20")) 
+    ("r,region", "Region scale", cxxopts::value<atg::uinteger>()->default_value("10")) 
+    ("k,slots", "Color quantization slots", cxxopts::value<atg::uinteger>()->default_value("10")) 
     ("i,iterations", "Seperation iterations", cxxopts::value<atg::uinteger>()->default_value("3"))
     ;
   // clang-format on
@@ -63,6 +64,7 @@ int main(int argc, char* argv[])
                        shadingIntensity.get(),
                        imageDimensions,
                        args["region"].as<atg::uinteger>(),
+                       args["slots"].as<atg::uinteger>(),
                        args["iterations"].as<atg::uinteger>());
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0

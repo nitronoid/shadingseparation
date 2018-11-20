@@ -64,6 +64,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
                      fpreal* io_shadingIntensity,
                      const uint2 _imageDimensions,
                      const uinteger _regionScale,
+                     const uinteger _numSlots,
                      const uinteger _iterations)
 {
   auto numPixels = _imageDimensions.x * _imageDimensions.y;
@@ -90,7 +91,6 @@ void seperateShading(const span<fpreal3> _sourceImage,
   {
     maxChroma = glm::max(maxChroma, chroma[i]);
   }
-  const auto numSlots = 20u;
   for (uinteger iter = 0u; iter < _iterations; ++iter)
   {
     auto pixelContributions = std::make_unique<uinteger[]>(numPixels);
@@ -99,8 +99,8 @@ void seperateShading(const span<fpreal3> _sourceImage,
     for (uinteger i = 0; i < numRegions; ++i)
     {
       auto region = regions[i];
-      auto estimatedAlbedoIntensity = std::make_unique<fpreal[]>(numSlots*numSlots);
-      std::fill_n(estimatedAlbedoIntensity.get(), numSlots * numSlots, 0.0f);
+      auto estimatedAlbedoIntensity = std::make_unique<fpreal[]>(_numSlots*_numSlots);
+      std::fill_n(estimatedAlbedoIntensity.get(), _numSlots * _numSlots, 0.0f);
 
       estimateAlbedoIntensities(region,
                                 estimatedAlbedoIntensity.get(),
@@ -108,12 +108,12 @@ void seperateShading(const span<fpreal3> _sourceImage,
                                 albedoIntensity.get(),
                                 chroma.get(),
                                 maxChroma,
-                                numSlots,
+                                _numSlots,
                                 _imageDimensions,
                                 _regionScale);
       for_each_local_pixel(
         [&](auto pixel, auto) {
-          auto chromaId      = hashChroma(chroma[pixel], maxChroma, numSlots);
+          auto chromaId      = hashChroma(chroma[pixel], maxChroma, _numSlots);
           interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
           pixelContributions[pixel]++;
         },
