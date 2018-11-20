@@ -64,13 +64,8 @@ int main(int argc, char* argv[])
                        shadingIntensity.get(),
                        imageDimensions,
                        args["region"].as<atg::uinteger>(),
-<<<<<<< HEAD
                        args["iterations"].as<atg::uinteger>(),
                        args["quantize-slots"].as<atg::uinteger>());
-=======
-                       args["slots"].as<atg::uinteger>(),
-                       args["iterations"].as<atg::uinteger>());
->>>>>>> a103c6fc2e6299524c3d00c471bbe0a7e912160e
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0
   // This makes the shading detail much easier to view

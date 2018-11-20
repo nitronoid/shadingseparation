@@ -35,6 +35,7 @@ void estimateAlbedoIntensities(const Region _region,
                                const uinteger _regionScale) noexcept
 {
   const uinteger numPixels = _regionScale * _regionScale;
+  const uinteger numUniqueColors = _numSlots * _numSlots;
   auto contributions =
     static_cast<uinteger*>(alloca(numUniqueColors * sizeof(uinteger)));
   std::fill_n(contributions, numUniqueColors, 0u);
