@@ -34,7 +34,6 @@ void estimateAlbedoIntensities(const Region _region,
                                const uint2 _imageDimensions,
                                const uinteger _regionScale) noexcept
 {
-  const uinteger numUniqueColors = _numSlots * _numSlots;
   const uinteger numPixels = _regionScale * _regionScale;
   auto contributions =
     static_cast<uinteger*>(alloca(numUniqueColors * sizeof(uinteger)));
@@ -85,7 +84,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
   auto&& regions      = regionResult.m_regions;
   auto&& numRegionsXY = regionResult.m_numRegions;
   auto numRegions     = numRegionsXY.x * numRegionsXY.y;
-  std::cout << "Regions Complete.\n";
+  std::cout << numRegions << "Regions Complete.\n";
 
   fpreal3 maxChroma(0.0f);
   for (uinteger i = 0u; i < numPixels; ++i)
@@ -104,7 +103,6 @@ void seperateShading(const span<fpreal3> _sourceImage,
       auto region = regions[i];
       auto estimatedAlbedoIntensity = std::make_unique<fpreal[]>(totalNumSlots);
       std::fill_n(estimatedAlbedoIntensity.get(), totalNumSlots, 0.0f);
-
       estimateAlbedoIntensities(region,
                                 estimatedAlbedoIntensity.get(),
                                 intensity.get(),
@@ -114,15 +112,15 @@ void seperateShading(const span<fpreal3> _sourceImage,
                                 _chromaSlots,
                                 _imageDimensions,
                                 _regionScale);
-  for_each_local_pixel(
-    [&](auto pixel, auto) {
-      auto chromaId      = hashChroma(chroma[pixel], maxChroma, _chromaSlots);
-      interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
-      pixelContributions[pixel]++;
-    },
-    region,
-    _imageDimensions,
-    _regionScale);
+    for_each_local_pixel(
+      [&](auto pixel, auto) {
+        auto chromaId      = hashChroma(chroma[pixel], maxChroma, _chromaSlots);
+        interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
+        pixelContributions[pixel]++;
+      },
+      region,
+      _imageDimensions,
+      _regionScale);
     }
     std::cout << "Expectation Complete.\n";
     tbb::parallel_for(
