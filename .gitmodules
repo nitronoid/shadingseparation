@@ -10,3 +10,6 @@
 [submodule "dep/cxxopts"]
 	path = dep/cxxopts
 	url = git@github.com:jarro2783/cxxopts.git
+[submodule "dep/dkm"]
+	path = dep/dkm
+	url = git@github.com:genbattle/dkm.git
