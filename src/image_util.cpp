@@ -19,11 +19,11 @@ void clampExtremeties(span<fpreal3> io_image)
   }
 }
 
-std::unique_ptr<fpreal[]> calculateIntensity(const span<fpreal3> _image)
+std::vector<fpreal> calculateIntensity(const span<fpreal3> _image)
 {
   uinteger numPixels = _image.size();
   // TODO: do not default construct
-  auto intensity = std::make_unique<fpreal[]>(numPixels);
+  std::vector<fpreal> intensity(numPixels);
   tbb::parallel_for(tbb::blocked_range<atg::uinteger>{0u, numPixels},
                     [&intensity, &_image](auto&& r) {
                       // Extract the intensity as the average of rgb
@@ -38,12 +38,12 @@ std::unique_ptr<fpreal[]> calculateIntensity(const span<fpreal3> _image)
   return intensity;
 }
 
-std::unique_ptr<fpreal3[]> calculateChroma(const span<fpreal3> _sourceImage,
+std::vector<fpreal3> calculateChroma(const span<fpreal3> _sourceImage,
                                            const span<fpreal> _intensity)
 {
   uinteger numPixels = _sourceImage.size();
   // {r/i, g/i, 3 - r/i - g/i}
-  auto chroma = std::make_unique<fpreal3[]>(numPixels);
+  std::vector<fpreal3> chroma(numPixels);
   tbb::parallel_for(tbb::blocked_range<atg::uinteger>{0u, numPixels},
                     [&](auto&& r) {
                       const auto end = r.end();

@@ -49,7 +49,6 @@ std::vector<std::vector<uinteger>> initMaterialSets(const span<fpreal3> _albedo,
     std::fill_n(mask.get(), numPixels, 0.0f);
     for (auto px : inv[i])
       mask[px] = 1.f;
-    std::cout << inv[i].size() / float(numPixels) << '\n';
     std::fill_n(eroded.get(), numPixels, 0.0f);
     erode(mask.get(),
           eroded.get(),
@@ -63,7 +62,6 @@ std::vector<std::vector<uinteger>> initMaterialSets(const span<fpreal3> _albedo,
       if (eroded[px] > 0.0f)
         matSet.push_back(px);
     }
-    std::cout << matSet.size() << '\n';
   }
 
   return materialSets;

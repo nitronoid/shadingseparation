@@ -9,9 +9,9 @@ BEGIN_AUTOTEXGEN_NAMESPACE
 
 void clampExtremeties(span<fpreal3> io_image);
 
-std::unique_ptr<fpreal[]> calculateIntensity(const span<fpreal3> _image);
+std::vector<fpreal> calculateIntensity(const span<fpreal3> _image);
 
-std::unique_ptr<fpreal3[]> calculateChroma(const span<fpreal3> _sourceImage,
+std::vector<fpreal3> calculateChroma(const span<fpreal3> _sourceImage,
                                            const span<fpreal> _intensity);
 
 template <typename T>

@@ -6,6 +6,7 @@
 #include <glm/common.hpp>
 
 #include <alloca.h>
+#include <numeric>
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
 
@@ -75,12 +76,10 @@ void seperateShading(const span<fpreal3> _sourceImage,
   auto numPixels = _imageDimensions.x * _imageDimensions.y;
   auto intensity = calculateIntensity(_sourceImage);
   // Extract the chroma of the image using our intensity
-  auto chroma = calculateChroma(_sourceImage, makeSpan(intensity, numPixels));
+  auto chroma = calculateChroma(_sourceImage, intensity);
   // Our shading intensity defaults to one, so albedo intensity = source
   // intensity i = si * ai
-  // TODO: Do not default construct
-  auto albedoIntensity = std::make_unique<fpreal[]>(numPixels);
-  std::copy_n(intensity.get(), numPixels, albedoIntensity.get());
+  auto albedoIntensity = intensity;
   std::fill_n(io_shadingIntensity, numPixels, 1.0f);
 
   // Divide our images into regions,
@@ -90,36 +89,37 @@ void seperateShading(const span<fpreal3> _sourceImage,
   auto&& regions      = regionResult.m_regions;
   auto&& numRegionsXY = regionResult.m_numRegions;
   auto numRegions     = numRegionsXY.x * numRegionsXY.y;
-  std::cout << numRegions << "Regions Complete.\n";
+  std::cout << "Region generation complete: " << numRegions << " created.\n";
 
-  fpreal3 maxChroma(0.0f);
-  for (uinteger i = 0u; i < numPixels; ++i)
-  {
-    maxChroma = glm::max(maxChroma, chroma[i]);
-  }
+  // Find the largest chroma value
+  auto maxChroma = std::accumulate(chroma.begin(), chroma.end(), fpreal3(0.0f),
+      [](const auto& a, const auto& b)
+      {
+        return glm::max(a, b);
+      });
+
   const uinteger totalNumSlots = _chromaSlots * _chromaSlots;
   for (uinteger resetNum = 0u; resetNum < _directIterations; ++resetNum)
   {
     // Reset the intensity to the albedo intensity every step
-    std::copy_n(albedoIntensity.get(), numPixels, intensity.get());
+    intensity = albedoIntensity;
     for (uinteger iter = 0u; iter < _intensityIterations; ++iter)
     {
-      std::cout << "Iteration " << iter + _intensityIterations * resetNum
-                << '\n';
-      auto pixelContributions     = std::make_unique<uinteger[]>(numPixels);
-      auto interimAlbedoIntensity = std::make_unique<fpreal[]>(numPixels);
+      std::cout << "\33[2K\rIteration " << 
+        iter + _intensityIterations * resetNum + 1 << ". " << std::flush;
+
+      std::vector<uinteger> pixelContributions(numPixels, 0u);
+      std::vector<fpreal> interimAlbedoIntensity(numPixels, 0.0f);
       // For each region
       for (uinteger i = 0; i < numRegions; ++i)
       {
         auto region = regions[i];
-        auto estimatedAlbedoIntensity =
-          std::make_unique<fpreal[]>(totalNumSlots);
-        std::fill_n(estimatedAlbedoIntensity.get(), totalNumSlots, 0.0f);
+        std::vector<fpreal> estimatedAlbedoIntensity(totalNumSlots, 0.0f);
         estimateAlbedoIntensities(region,
-                                  estimatedAlbedoIntensity.get(),
-                                  intensity.get(),
-                                  albedoIntensity.get(),
-                                  chroma.get(),
+                                  estimatedAlbedoIntensity.data(),
+                                  intensity.data(),
+                                  albedoIntensity.data(),
+                                  chroma.data(),
                                   maxChroma,
                                   _chromaSlots,
                                   _imageDimensions,
@@ -134,7 +134,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
           _imageDimensions,
           _regionScale);
       }
-      std::cout << "Expectation Complete.\n";
+
       tbb::parallel_for(tbb::blocked_range<uinteger>{0u, numPixels},
                         [&](auto&& r) {
                           const auto end = r.end();
@@ -144,7 +144,6 @@ void seperateShading(const span<fpreal3> _sourceImage,
                               interimAlbedoIntensity[i] / pixelContributions[i];
                           }
                         });
-      std::cout << "Maximisation Complete.\n";
     }
     // Calculate shading intensity
     tbb::parallel_for(
@@ -156,6 +155,8 @@ void seperateShading(const span<fpreal3> _sourceImage,
         }
       });
   }
+  std::cout<<"\33[2K\r" << _directIterations * _intensityIterations << 
+    " Iterations completed.\n"<<std::flush;
 
   // Calculate final albedo
   tbb::parallel_for(tbb::blocked_range<uinteger>{0u, numPixels}, [&](auto&& r) {
