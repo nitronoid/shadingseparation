@@ -12,20 +12,29 @@
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
-using fpreal  = float;
-using fpreal2 = glm::tvec2<fpreal>;
-using fpreal3 = glm::tvec3<fpreal>;
-using fpreal4 = glm::tvec4<fpreal>;
+using glm::vec;
+using glm::qualifier;
 
-using integer = int32_t;
-using int2    = glm::tvec2<integer>;
-using int3    = glm::tvec3<integer>;
-using int4    = glm::tvec4<integer>;
+#define PPCAT_NX(A, B) A##B
+#define PPCAT(A, B) PPCAT_NX(A, B)
+#define STRINGIFY_NX(A) #A
+#define STRINGIFY(A) STRINGIFY_NX(A)
 
-using uinteger = uint32_t;
-using uint2    = glm::tvec2<uinteger>;
-using uint3    = glm::tvec3<uinteger>;
-using uint4    = glm::tvec4<uinteger>;
+#define DECLARE_MATH_TYPE_ALIASES(VNAME, TYPE, PRECISION)                \
+  using VNAME = TYPE;                                                    \
+  using PPCAT(VNAME, 2) = vec<2, VNAME, PRECISION>;                      \
+  using PPCAT(VNAME, 3) = vec<3, VNAME, PRECISION>;                      \
+  using PPCAT(VNAME, 4) = vec<4, VNAME, PRECISION>
+
+DECLARE_MATH_TYPE_ALIASES(fpreal,   float,    glm::defaultp);
+DECLARE_MATH_TYPE_ALIASES(integer,  int32_t,  glm::defaultp);
+DECLARE_MATH_TYPE_ALIASES(uinteger, uint32_t, glm::defaultp);
+
+#undef DECLARE_MATH_TYPE_ALIASES
+#undef STRINGIFY
+#undef STRINGIFY_NX
+#undef PPCAT
+#undef PPCAT_NX
 
 using nonstd::span;
 using nonstd::string_view;

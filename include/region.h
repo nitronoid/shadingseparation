@@ -7,20 +7,20 @@
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
-using Region = uint2;
+using Region = uinteger2;
 
 struct RegionData
 {
   std::unique_ptr<Region[]> m_regions;
-  uint2 m_numRegions;
+  uinteger2 m_numRegions;
 };
-RegionData generateRegions(const uint2 _imageDim,
+RegionData generateRegions(const uinteger2 _imageDim,
                            const uinteger _regionScale);
 
 template <typename F>
 void for_each_local_pixel(F&& _func,
-                          const uint2 _regionStart,
-                          const uint2 _imageDim,
+                          const uinteger2 _regionStart,
+                          const uinteger2 _imageDim,
                           const uinteger _regionScale) noexcept;
 
 #include "region.inl"

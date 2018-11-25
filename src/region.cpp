@@ -2,7 +2,7 @@
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
-RegionData generateRegions(const uint2 _imageDim,
+RegionData generateRegions(const uinteger2 _imageDim,
                            const uinteger _regionScale)
 {
   RegionData r;
@@ -10,7 +10,7 @@ RegionData generateRegions(const uint2 _imageDim,
   // those axis A, minus the last index within a Region (R-1) N = A - (R - 1)
   // <=> N = A - R + 1
   r.m_numRegions =
-    uint2{_imageDim.x - _regionScale + 1, _imageDim.y - _regionScale + 1};
+    uinteger2{_imageDim.x - _regionScale + 1, _imageDim.y - _regionScale + 1};
   // Store the total number of regions in the image
   auto totalNumRegions = r.m_numRegions.x * r.m_numRegions.y;
   // Allocate storage for the regions

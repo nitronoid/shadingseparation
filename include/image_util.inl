@@ -1,7 +1,7 @@
 template <typename T>
 void writeImage(const string_view _filename,
                 const span<T> _data,
-                const uint2 _imageDim)
+                const uinteger2 _imageDim)
 {
   std::cout << "Writing image to " << _filename << '\n';
   // OpenImageIO namespace
@@ -41,7 +41,7 @@ auto readImage(const string_view _filename)
     });
   // Get the image specification and store the dimensions
   auto&& spec = input->spec();
-  uint2 dim{spec.width, spec.height};
+  uinteger2 dim{spec.width, spec.height};
 
   // Allocated an array for our data
   auto data = std::make_unique<T[]>(dim.x * dim.y);
@@ -54,7 +54,7 @@ auto readImage(const string_view _filename)
   struct OwningSpan
   {
     std::unique_ptr<T[]> m_data;
-    uint2 m_imageDim;
+    uinteger2 m_imageDim;
   };
   return OwningSpan{std::move(data), std::move(dim)};
 }

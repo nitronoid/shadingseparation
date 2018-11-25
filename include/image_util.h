@@ -17,7 +17,7 @@ std::unique_ptr<fpreal3[]> calculateChroma(const span<fpreal3> _sourceImage,
 template <typename T>
 void writeImage(const string_view _filename,
                 const span<T> _data,
-                const uint2 _imageDim);
+                const uinteger2 _imageDim);
 
 template <typename T>
 auto readImage(const string_view _filename);

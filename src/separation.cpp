@@ -31,7 +31,7 @@ void estimateAlbedoIntensities(const Region _region,
                                const fpreal3* _chroma,
                                const fpreal3 _maxChroma,
                                const uinteger _numSlots,
-                               const uint2 _imageDimensions,
+                               const uinteger2 _imageDimensions,
                                const uinteger _regionScale) noexcept
 {
   const uinteger numPixels = _regionScale * _regionScale;
@@ -63,7 +63,7 @@ void estimateAlbedoIntensities(const Region _region,
 void seperateShading(const span<fpreal3> _sourceImage,
                      fpreal3* io_albedo,
                      fpreal* io_shadingIntensity,
-                     const uint2 _imageDimensions,
+                     const uinteger2 _imageDimensions,
                      const uinteger _regionScale,
                      const uinteger _directIterations,
                      const uinteger _intensityIterations,
@@ -140,7 +140,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
             }});
       std::cout << "Maximisation Complete.\n";
     }
-    // Calculate final albedo and shading maps from the separated albedo intensity
+    // Calculate shading intensity
     tbb::parallel_for(
         tbb::blocked_range<uinteger>{0u, numPixels},
         [&] (auto&& r) { 
@@ -152,14 +152,14 @@ void seperateShading(const span<fpreal3> _sourceImage,
   }
 
   
-  // Calculate final albedo and shading maps from the separated albedo intensity
+  // Calculate final albedo
   tbb::parallel_for(
       tbb::blocked_range<uinteger>{0u, numPixels},
       [&] (auto&& r) { 
         const auto end = r.end();
         for (auto i = r.begin(); i < end; ++i) 
         {
-          io_albedo[i]           = albedoIntensity[i] * chroma[i];
+          io_albedo[i] = albedoIntensity[i] * chroma[i];
         }});
 }
 
