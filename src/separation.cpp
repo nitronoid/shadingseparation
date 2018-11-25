@@ -1,11 +1,13 @@
 #include "separation.h"
+
 #include "image_util.h"
 #include "util.h"
 
 #include <glm/common.hpp>
-#include <tbb/parallel_for.h>
-#include <tbb/blocked_range.h>
+
 #include <alloca.h>
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
@@ -15,13 +17,13 @@ uinteger hashChroma(const fpreal3 _chroma,
                     const fpreal3 _max,
                     const uinteger _slots) noexcept
 {
-  //uinteger x = glm::max(1.0f, glm::ceil(_chroma.r * 10.f));
-  //uinteger y = glm::max(1.0f, glm::ceil(_chroma.g * 10.f));
-  //return (x - 1.f) * 20.f + y;
-   auto last  = _slots - 1;
-   uinteger x = (_chroma.x / _max.x) * last;
-   uinteger y = (_chroma.y / _max.y) * last;
-   return y * last + x;
+  // uinteger x = glm::max(1.0f, glm::ceil(_chroma.r * 10.f));
+  // uinteger y = glm::max(1.0f, glm::ceil(_chroma.g * 10.f));
+  // return (x - 1.f) * 20.f + y;
+  auto last  = _slots - 1;
+  uinteger x = (_chroma.x / _max.x) * last;
+  uinteger y = (_chroma.y / _max.y) * last;
+  return y * last + x;
 }
 
 void estimateAlbedoIntensities(const Region _region,
@@ -34,7 +36,7 @@ void estimateAlbedoIntensities(const Region _region,
                                const uinteger2 _imageDimensions,
                                const uinteger _regionScale) noexcept
 {
-  const uinteger numPixels = _regionScale * _regionScale;
+  const uinteger numPixels       = _regionScale * _regionScale;
   const uinteger numUniqueColors = _numSlots * _numSlots;
   auto contributions =
     static_cast<uinteger*>(alloca(numUniqueColors * sizeof(uinteger)));
@@ -56,7 +58,8 @@ void estimateAlbedoIntensities(const Region _region,
   for (uinteger i = 0u; i < numUniqueColors; ++i)
   {
     if (contributions[i])
-      io_estimatedAlbedoIntensity[i] /= (contributions[i] * shadingIntensityAverage);
+      io_estimatedAlbedoIntensity[i] /=
+        (contributions[i] * shadingIntensityAverage);
   }
 }
 
@@ -101,14 +104,16 @@ void seperateShading(const span<fpreal3> _sourceImage,
     std::copy_n(albedoIntensity.get(), numPixels, intensity.get());
     for (uinteger iter = 0u; iter < _intensityIterations; ++iter)
     {
-      std::cout<<"Iteration " << iter + _intensityIterations * resetNum<<'\n';
-      auto pixelContributions = std::make_unique<uinteger[]>(numPixels);
+      std::cout << "Iteration " << iter + _intensityIterations * resetNum
+                << '\n';
+      auto pixelContributions     = std::make_unique<uinteger[]>(numPixels);
       auto interimAlbedoIntensity = std::make_unique<fpreal[]>(numPixels);
       // For each region
       for (uinteger i = 0; i < numRegions; ++i)
       {
         auto region = regions[i];
-        auto estimatedAlbedoIntensity = std::make_unique<fpreal[]>(totalNumSlots);
+        auto estimatedAlbedoIntensity =
+          std::make_unique<fpreal[]>(totalNumSlots);
         std::fill_n(estimatedAlbedoIntensity.get(), totalNumSlots, 0.0f);
         estimateAlbedoIntensities(region,
                                   estimatedAlbedoIntensity.get(),
@@ -119,48 +124,47 @@ void seperateShading(const span<fpreal3> _sourceImage,
                                   _chromaSlots,
                                   _imageDimensions,
                                   _regionScale);
-      for_each_local_pixel(
-        [&](auto pixel, auto) {
-          auto chromaId      = hashChroma(chroma[pixel], maxChroma, _chromaSlots);
-          interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
-          pixelContributions[pixel]++;
-        },
-        region,
-        _imageDimensions,
-        _regionScale);
+        for_each_local_pixel(
+          [&](auto pixel, auto) {
+            auto chromaId = hashChroma(chroma[pixel], maxChroma, _chromaSlots);
+            interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
+            pixelContributions[pixel]++;
+          },
+          region,
+          _imageDimensions,
+          _regionScale);
       }
       std::cout << "Expectation Complete.\n";
-      tbb::parallel_for(
-          tbb::blocked_range<uinteger>{0u, numPixels},
-          [&] (auto&& r) { 
-            const auto end = r.end();
-            for (auto i = r.begin(); i < end; ++i) 
-            {
-              albedoIntensity[i] = interimAlbedoIntensity[i] / pixelContributions[i];
-            }});
+      tbb::parallel_for(tbb::blocked_range<uinteger>{0u, numPixels},
+                        [&](auto&& r) {
+                          const auto end = r.end();
+                          for (auto i = r.begin(); i < end; ++i)
+                          {
+                            albedoIntensity[i] =
+                              interimAlbedoIntensity[i] / pixelContributions[i];
+                          }
+                        });
       std::cout << "Maximisation Complete.\n";
     }
     // Calculate shading intensity
     tbb::parallel_for(
-        tbb::blocked_range<uinteger>{0u, numPixels},
-        [&] (auto&& r) { 
-          const auto end = r.end();
-          for (auto i = r.begin(); i < end; ++i) 
-          {
-            io_shadingIntensity[i] += (intensity[i] / albedoIntensity[i] - 1.0f);
-          }});
+      tbb::blocked_range<uinteger>{0u, numPixels}, [&](auto&& r) {
+        const auto end = r.end();
+        for (auto i = r.begin(); i < end; ++i)
+        {
+          io_shadingIntensity[i] += (intensity[i] / albedoIntensity[i] - 1.0f);
+        }
+      });
   }
 
-  
   // Calculate final albedo
-  tbb::parallel_for(
-      tbb::blocked_range<uinteger>{0u, numPixels},
-      [&] (auto&& r) { 
-        const auto end = r.end();
-        for (auto i = r.begin(); i < end; ++i) 
-        {
-          io_albedo[i] = albedoIntensity[i] * chroma[i];
-        }});
+  tbb::parallel_for(tbb::blocked_range<uinteger>{0u, numPixels}, [&](auto&& r) {
+    const auto end = r.end();
+    for (auto i = r.begin(); i < end; ++i)
+    {
+      io_albedo[i] = albedoIntensity[i] * chroma[i];
+    }
+  });
 }
 
 END_AUTOTEXGEN_NAMESPACE

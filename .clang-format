@@ -91,9 +91,12 @@ PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 60
 PointerAlignment: Left
 RawStringFormats: 
-  - Delimiter:       pb
-    Language:        TextProto
-    BasedOnStyle:    google
+  - Language: Cpp
+    Delimiters:
+      - 'cc'
+      - 'cpp'
+    BasedOnStyle: llvm
+    CanonicalDelimiter: 'cc'
 ReflowComments:  true
 SortIncludes:    true
 SortUsingDeclarations: false

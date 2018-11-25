@@ -1,15 +1,14 @@
 #include "image_util.h"
 #include "separation.h"
+#include "specular.h"
 #include "types.h"
 #include "util.h"
-#include "specular.h"
 
 #include <cxxopts.hpp>
 #include <iomanip>
 #include <iostream>
-#include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
-
+#include <tbb/parallel_for.h>
 
 namespace
 {
@@ -72,13 +71,12 @@ int main(int argc, char* argv[])
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0
   // This makes the shading detail much easier to view
-  tbb::parallel_for(
-      tbb::blocked_range<atg::uinteger>{0u, numPixels},
-      [&shadingIntensity] (auto&& r) { 
-        const auto end = r.end();
-        for (auto i = r.begin(); i < end; ++i) 
-          shadingIntensity[i] *= 0.5f; 
-        });
+  tbb::parallel_for(tbb::blocked_range<atg::uinteger>{0u, numPixels},
+                    [&shadingIntensity](auto&& r) {
+                      const auto end = r.end();
+                      for (auto i = r.begin(); i < end; ++i)
+                        shadingIntensity[i] *= 0.5f;
+                    });
 
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();
@@ -89,19 +87,18 @@ int main(int argc, char* argv[])
                   atg::makeSpan(shadingIntensity, numPixels),
                   imageDimensions);
 
-
   auto gtAlbedo = atg::makeSpan(albedo, numPixels);
 
   const uint numSets = 2u;
   // Loading sets from stroke images
-  //auto set0img = atg::readImage<atg::fpreal3>("images/sets/set0.png");
-  //auto set0 = atg::makeSpan(set0img.m_data, numPixels);
-  //auto set1img = atg::readImage<atg::fpreal3>("images/sets/set1.png");
-  //auto set1 = atg::makeSpan(set1img.m_data, numPixels);
-  //std::vector<std::vector<atg::uinteger>> materialSets(numSets);
-  //materialSets[0].reserve(numPixels);
-  //materialSets[1].reserve(numPixels);
-  //for (uint i = 0u; i < numPixels; ++i)
+  // auto set0img = atg::readImage<atg::fpreal3>("images/sets/set0.png");
+  // auto set0 = atg::makeSpan(set0img.m_data, numPixels);
+  // auto set1img = atg::readImage<atg::fpreal3>("images/sets/set1.png");
+  // auto set1 = atg::makeSpan(set1img.m_data, numPixels);
+  // std::vector<std::vector<atg::uinteger>> materialSets(numSets);
+  // materialSets[0].reserve(numPixels);
+  // materialSets[1].reserve(numPixels);
+  // for (uint i = 0u; i < numPixels; ++i)
   //{
   //  if(set0[i].x > 0.f) materialSets[0].push_back(i);
   //  if(set1[i].x > 0.f) materialSets[1].push_back(i);
@@ -113,7 +110,8 @@ int main(int argc, char* argv[])
 
   for (uint i = 0u; i < numSets; ++i)
   {
-    atg::writeImage(outputPrefix + "_probability_" + std::to_string(i) + "." + extension,
+    atg::writeImage(outputPrefix + "_probability_" + std::to_string(i) + "." +
+                      extension,
                     atg::span<atg::fpreal>(probabilities[i]),
                     imageDimensions);
   }
@@ -122,13 +120,14 @@ int main(int argc, char* argv[])
   for (uint i = 0u; i < numSets; ++i)
   {
     std::fill_n(img.get(), numPixels, 0.0f);
-    for (auto p : materialSets[i]) img[p] = 1.f; 
+    for (auto p : materialSets[i])
+      img[p] = 1.f;
 
-    atg::writeImage(outputPrefix + "_material_set_" + std::to_string(i) + "." + extension,
+    atg::writeImage(outputPrefix + "_material_set_" + std::to_string(i) + "." +
+                      extension,
                     atg::makeSpan(img, numPixels),
                     imageDimensions);
   }
-
 
   return 0;
 }

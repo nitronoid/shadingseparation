@@ -20,14 +20,14 @@ using glm::qualifier;
 #define STRINGIFY_NX(A) #A
 #define STRINGIFY(A) STRINGIFY_NX(A)
 
-#define DECLARE_MATH_TYPE_ALIASES(VNAME, TYPE, PRECISION)                \
-  using VNAME = TYPE;                                                    \
-  using PPCAT(VNAME, 2) = vec<2, VNAME, PRECISION>;                      \
-  using PPCAT(VNAME, 3) = vec<3, VNAME, PRECISION>;                      \
+#define DECLARE_MATH_TYPE_ALIASES(VNAME, TYPE, PRECISION) \
+  using VNAME           = TYPE;                           \
+  using PPCAT(VNAME, 2) = vec<2, VNAME, PRECISION>;       \
+  using PPCAT(VNAME, 3) = vec<3, VNAME, PRECISION>;       \
   using PPCAT(VNAME, 4) = vec<4, VNAME, PRECISION>
 
-DECLARE_MATH_TYPE_ALIASES(fpreal,   float,    glm::defaultp);
-DECLARE_MATH_TYPE_ALIASES(integer,  int32_t,  glm::defaultp);
+DECLARE_MATH_TYPE_ALIASES(fpreal, float, glm::defaultp);
+DECLARE_MATH_TYPE_ALIASES(integer, int32_t, glm::defaultp);
 DECLARE_MATH_TYPE_ALIASES(uinteger, uint32_t, glm::defaultp);
 
 #undef DECLARE_MATH_TYPE_ALIASES
