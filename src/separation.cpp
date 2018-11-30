@@ -4,6 +4,7 @@
 #include "util.h"
 
 #include <glm/common.hpp>
+#include <glm/gtx/extended_min_max.hpp>
 
 #include <alloca.h>
 #include <numeric>
@@ -64,6 +65,66 @@ void estimateAlbedoIntensities(const Region _region,
   }
 }
 
+namespace
+{
+
+std::vector<fpreal> generateKernel(uinteger2 _dim, fpreal sigma = 1.0f) 
+{ 
+  auto sqr = [](auto x) { return x*x; };
+  std::vector<fpreal> kernel(_dim.x * _dim.y);
+
+  const fpreal2 mid = (static_cast<fpreal2>(_dim) - 1.f) * 0.5f;
+
+  const fpreal sigmaSqr = sqr(sigma);
+  const fpreal spread = 1.0f / (sigmaSqr * 2.0f);
+  const auto denom = 1.f / (8.f * std::atan(1.f) * sigmaSqr);
+
+  std::vector<fpreal> gauss_x(_dim.x);
+  std::vector<fpreal> gauss_y(_dim.y);
+
+  for (integer x = 0u; x < _dim.x; ++x)
+  {
+    gauss_x[x] = std::exp(-sqr(x-mid.x) * spread);
+  }
+  for (integer y = 0u; y < _dim.y; ++y)
+  {
+    gauss_y[y] = std::exp(-sqr(y-mid.y) * spread);
+  }
+
+  for (integer y = 0; y < _dim.y; y++) 
+  { 
+    for (integer x = 0; x < _dim.x; x++)
+    {
+      kernel[y * _dim.x + x] = gauss_x[x] * gauss_y[y] * denom;
+    } 
+  } 
+
+  //auto invSum = 1.0f / std::accumulate(kernel.begin(), kernel.end(), 0.0f);
+  //std::transform(kernel.begin(), kernel.end(), kernel.begin(), [&invSum]
+  //    (const auto& _x)
+  //    {
+  //      return _x * invSum;
+  //    });
+
+  return kernel;
+} 
+
+fpreal contribSum(uinteger2 _contributions, const span<const fpreal> _kernel, uinteger _kernelScale)
+{
+  fpreal sum = 0.f;
+  for (uinteger y = 0u; y < _contributions.y; ++y)
+  for (uinteger x = 0u; x < _contributions.x; ++x)
+    sum += _kernel[y * _kernelScale + x];
+  return sum;
+}
+
+uinteger2 calculateContributions(uinteger2 _coord, uinteger2 _regionDim, uinteger2 _dim)
+{
+  auto coord = _coord + 1u;
+  return glm::min(_regionDim, coord, _dim - _coord);
+}
+}
+
 void seperateShading(const span<fpreal3> _sourceImage,
                      fpreal3* io_albedo,
                      fpreal* io_shadingIntensity,
@@ -99,6 +160,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
       });
 
   const uinteger totalNumSlots = _chromaSlots * _chromaSlots;
+  const auto kernel = generateKernel({_regionScale, _regionScale});
   for (uinteger resetNum = 0u; resetNum < _directIterations; ++resetNum)
   {
     // Reset the intensity to the albedo intensity every step
@@ -125,10 +187,10 @@ void seperateShading(const span<fpreal3> _sourceImage,
                                   _imageDimensions,
                                   _regionScale);
         for_each_local_pixel(
-          [&](auto pixel, auto) {
+          [&](auto pixel, auto local) {
             auto chromaId = hashChroma(chroma[pixel], maxChroma, _chromaSlots);
-            interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId];
-            pixelContributions[pixel]++;
+            auto w = kernel[local];
+            interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId] * w;
           },
           region,
           _imageDimensions,
@@ -140,8 +202,11 @@ void seperateShading(const span<fpreal3> _sourceImage,
                           const auto end = r.end();
                           for (auto i = r.begin(); i < end; ++i)
                           {
+                          uinteger2 pixelCoord{i%_imageDimensions.x, i/_imageDimensions.x};
+            auto contrib = calculateContributions(pixelCoord, uinteger2(_regionScale), _imageDimensions);
+                            auto pixelContributions = contribSum(contrib, kernel, _regionScale);
                             albedoIntensity[i] =
-                              interimAlbedoIntensity[i] / pixelContributions[i];
+                              interimAlbedoIntensity[i] / pixelContributions;
                           }
                         });
     }
