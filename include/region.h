@@ -18,6 +18,11 @@ RegionData generateRegions(const uinteger2 _imageDim,
                            const uinteger _regionScale);
 
 template <typename F>
+void for_each_local_pixel2D(F&& _func,
+                          const uinteger2 _regionStart,
+                          const uinteger _regionScale) noexcept;
+
+template <typename F>
 void for_each_local_pixel(F&& _func,
                           const uinteger2 _regionStart,
                           const uinteger2 _imageDim,
