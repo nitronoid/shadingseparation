@@ -1,7 +1,7 @@
 #include "separation.h"
-
 #include "image_util.h"
 #include "util.h"
+#include "filter.h"
 
 #include <glm/common.hpp>
 #include <glm/gtx/extended_min_max.hpp>
@@ -19,9 +19,9 @@ uinteger hashChroma(const fpreal3 _chroma,
                     const fpreal3 _max,
                     const uinteger _slots) noexcept
 {
-  // uinteger x = glm::max(1.0f, glm::ceil(_chroma.r * 10.f));
-  // uinteger y = glm::max(1.0f, glm::ceil(_chroma.g * 10.f));
-  // return (x - 1.f) * 20.f + y;
+  // uinteger x = glm::max(1.0_f, glm::ceil(_chroma.r * 10.0_f));
+  // uinteger y = glm::max(1.0_f, glm::ceil(_chroma.g * 10.0_f));
+  // return (x - 1.0_f) * 20.0_f + y;
   auto last  = _slots - 1;
   uinteger x = (_chroma.x / _max.x) * last;
   uinteger y = (_chroma.y / _max.y) * last;
@@ -44,7 +44,7 @@ void estimateAlbedoIntensities(const Region _region,
     static_cast<uinteger*>(alloca(numUniqueColors * sizeof(uinteger)));
   std::fill_n(contributions, numUniqueColors, 0u);
   // Average the shading intensity
-  fpreal shadingIntensitySum(0.0f);
+  fpreal shadingIntensitySum(0.0_f);
   for_each_local_pixel(
     [&](auto pixel, auto) {
       auto chromaId = hashChroma(_chroma[pixel], _maxChroma, _numSlots);
@@ -67,57 +67,6 @@ void estimateAlbedoIntensities(const Region _region,
 
 namespace
 {
-
-std::vector<fpreal> generateKernel(uinteger2 _dim, fpreal sigma = 1.0f) 
-{ 
-  auto sqr = [](auto x) { return x*x; };
-  std::vector<fpreal> kernel(_dim.x * _dim.y);
-
-  const fpreal2 mid = (static_cast<fpreal2>(_dim) - 1.f) * 0.5f;
-
-  const fpreal sigmaSqr = sqr(sigma);
-  const fpreal spread = 1.0f / (sigmaSqr * 2.0f);
-  const auto denom = 1.f / (8.f * std::atan(1.f) * sigmaSqr);
-
-  std::vector<fpreal> gauss_x(_dim.x);
-  std::vector<fpreal> gauss_y(_dim.y);
-
-  for (integer x = 0u; x < _dim.x; ++x)
-  {
-    gauss_x[x] = std::exp(-sqr(x-mid.x) * spread);
-  }
-  for (integer y = 0u; y < _dim.y; ++y)
-  {
-    gauss_y[y] = std::exp(-sqr(y-mid.y) * spread);
-  }
-
-  for (integer y = 0; y < _dim.y; y++) 
-  { 
-    for (integer x = 0; x < _dim.x; x++)
-    {
-      kernel[y * _dim.x + x] = gauss_x[x] * gauss_y[y] * denom;
-    } 
-  } 
-
-  //auto invSum = 1.0f / std::accumulate(kernel.begin(), kernel.end(), 0.0f);
-  //std::transform(kernel.begin(), kernel.end(), kernel.begin(), [&invSum]
-  //    (const auto& _x)
-  //    {
-  //      return _x * invSum;
-  //    });
-
-  return kernel;
-} 
-
-fpreal contribSum(uinteger2 _contributions, const span<const fpreal> _kernel, uinteger _kernelScale)
-{
-  fpreal sum = 0.f;
-  for (uinteger y = 0u; y < _contributions.y; ++y)
-  for (uinteger x = 0u; x < _contributions.x; ++x)
-    sum += _kernel[y * _kernelScale + x];
-  return sum;
-}
-
 uinteger2 calculateContributions(uinteger2 _coord, uinteger2 _regionDim, uinteger2 _dim)
 {
   auto coord = _coord + 1u;
@@ -141,7 +90,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
   // Our shading intensity defaults to one, so albedo intensity = source
   // intensity i = si * ai
   auto albedoIntensity = intensity;
-  std::fill_n(io_shadingIntensity, numPixels, 1.0f);
+  std::fill_n(io_shadingIntensity, numPixels, 1.0_f);
 
   // Divide our images into regions,
   // we store the regions using pixel coordinates that represent their top left
@@ -153,14 +102,15 @@ void seperateShading(const span<fpreal3> _sourceImage,
   std::cout << "Region generation complete: " << numRegions << " created.\n";
 
   // Find the largest chroma value
-  auto maxChroma = std::accumulate(chroma.begin(), chroma.end(), fpreal3(0.0f),
+  auto maxChroma = std::accumulate(chroma.begin(), chroma.end(), fpreal3(0.0_f),
       [](const auto& a, const auto& b)
       {
         return glm::max(a, b);
       });
 
   const uinteger totalNumSlots = _chromaSlots * _chromaSlots;
-  const auto kernel = generateKernel({_regionScale, _regionScale});
+  const auto filter = gaussianFilter(uinteger2(_regionScale));
+
   for (uinteger resetNum = 0u; resetNum < _directIterations; ++resetNum)
   {
     // Reset the intensity to the albedo intensity every step
@@ -171,12 +121,12 @@ void seperateShading(const span<fpreal3> _sourceImage,
         iter + _intensityIterations * resetNum + 1 << ". " << std::flush;
 
       std::vector<uinteger> pixelContributions(numPixels, 0u);
-      std::vector<fpreal> interimAlbedoIntensity(numPixels, 0.0f);
+      std::vector<fpreal> interimAlbedoIntensity(numPixels, 0.0_f);
       // For each region
       for (uinteger i = 0; i < numRegions; ++i)
       {
         auto region = regions[i];
-        std::vector<fpreal> estimatedAlbedoIntensity(totalNumSlots, 0.0f);
+        std::vector<fpreal> estimatedAlbedoIntensity(totalNumSlots, 0.0_f);
         estimateAlbedoIntensities(region,
                                   estimatedAlbedoIntensity.data(),
                                   intensity.data(),
@@ -189,7 +139,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
         for_each_local_pixel(
           [&](auto pixel, auto local) {
             auto chromaId = hashChroma(chroma[pixel], maxChroma, _chromaSlots);
-            auto w = kernel[local];
+            auto w = filter[local];
             interimAlbedoIntensity[pixel] += estimatedAlbedoIntensity[chromaId] * w;
           },
           region,
@@ -202,11 +152,11 @@ void seperateShading(const span<fpreal3> _sourceImage,
                           const auto end = r.end();
                           for (auto i = r.begin(); i < end; ++i)
                           {
-                          uinteger2 pixelCoord{i%_imageDimensions.x, i/_imageDimensions.x};
-            auto contrib = calculateContributions(pixelCoord, uinteger2(_regionScale), _imageDimensions);
-                            auto pixelContributions = contribSum(contrib, kernel, _regionScale);
+                            uinteger2 pixelCoord{i%_imageDimensions.x, i/_imageDimensions.x};
+                            auto contrib = calculateContributions(pixelCoord, uinteger2(_regionScale), _imageDimensions);
+                            auto pixelContributions = filterSum(filter, uinteger2(_regionScale), contrib);
                             albedoIntensity[i] =
-                              interimAlbedoIntensity[i] / pixelContributions;
+                              interimAlbedoIntensity[i] / (pixelContributions);
                           }
                         });
     }
@@ -216,7 +166,7 @@ void seperateShading(const span<fpreal3> _sourceImage,
         const auto end = r.end();
         for (auto i = r.begin(); i < end; ++i)
         {
-          io_shadingIntensity[i] += (intensity[i] / albedoIntensity[i] - 1.0f);
+          io_shadingIntensity[i] += (intensity[i] / albedoIntensity[i] - 1.0_f);
         }
       });
   }

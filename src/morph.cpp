@@ -24,14 +24,14 @@ void erode(fpreal* _in,
     for (uinteger x = 0u; x < _imageDim.x; ++x)
     {
       const uinteger offset = y * _imageDim.x;
-      fpreal w              = 1.f;
+      fpreal w              = 1.0_f;
       auto yBounds          = computeBounds(y, kernelHalf.y, _imageDim.y);
       auto xBounds          = computeBounds(x, kernelHalf.x, _imageDim.x);
       for (uinteger n = yBounds.x; n < yBounds.y; ++n)
       {
         w *= std::accumulate(_in + (n * _imageDim.x) + xBounds.x,
                              _in + (n * _imageDim.x) + xBounds.y,
-                             1.f,
+                             1.0_f,
                              std::multiplies<fpreal>());
       }
       o_out[offset + x] = w;

@@ -46,10 +46,10 @@ std::vector<std::vector<uinteger>> initMaterialSets(const span<fpreal3> _albedo,
   auto eroded = std::make_unique<atg::fpreal[]>(numPixels);
   for (uinteger i = 0u; i < _numSets; ++i)
   {
-    std::fill_n(mask.get(), numPixels, 0.0f);
+    std::fill_n(mask.get(), numPixels, 0.0_f);
     for (auto px : inv[i])
-      mask[px] = 1.f;
-    std::fill_n(eroded.get(), numPixels, 0.0f);
+      mask[px] = 1.0_f;
+    std::fill_n(eroded.get(), numPixels, 0.0_f);
     erode(mask.get(),
           eroded.get(),
           _imageDim,
@@ -59,7 +59,7 @@ std::vector<std::vector<uinteger>> initMaterialSets(const span<fpreal3> _albedo,
     auto& matSet = materialSets[i];
     for (uinteger px = 0u; px < numPixels; ++px)
     {
-      if (eroded[px] > 0.0f)
+      if (eroded[px] > 0.0_f)
         matSet.push_back(px);
     }
   }
@@ -168,7 +168,7 @@ computeProbability(const span<std::vector<uinteger>> _materialSets,
 {
   const uinteger numPixels = _albedo.size();
   const uinteger k         = 10u;
-  const fpreal ik          = 1.0f / k;
+  const fpreal ik          = 1.0_f / k;
   std::vector<std::vector<fpreal>> probabilities(_materialSets.size());
   for (auto& prob : probabilities)
     prob.resize(numPixels);
@@ -181,15 +181,15 @@ computeProbability(const span<std::vector<uinteger>> _materialSets,
     for (const auto& ms : _materialSets)
     {
       auto closest  = closestColIndicess(ms, _albedo, i, k);
-      auto distance = 0.f;
+      auto distance = 0.0_f;
       for (const auto& c : closest)
       {
         distance += glm::fastDistance(_albedo[c], _albedo[i]);
       }
-      distances.push_back(1.f / (ik * distance));
+      distances.push_back(1.0_f / (ik * distance));
     }
 
-    auto distanceSum = std::accumulate(distances.begin(), distances.end(), 0.f);
+    auto distanceSum = std::accumulate(distances.begin(), distances.end(), 0.0_f);
 
     for (uinteger j = 0u; j < _materialSets.size(); ++j)
     {
