@@ -14,12 +14,12 @@ std::vector<fpreal> calculateIntensity(const span<fpreal3> _image);
 std::vector<fpreal3> calculateChroma(const span<fpreal3> _sourceImage,
                                            const span<fpreal> _intensity);
 
-template <typename T>
+template <typename T, typename E = fpreal>
 void writeImage(const string_view _filename,
-                const span<T> _data,
+                const T* _data,
                 const uinteger2 _imageDim);
 
-template <typename T>
+template <typename T, typename E = fpreal>
 auto readImage(const string_view _filename);
 
 #include "image_util.inl"  //template definitions
