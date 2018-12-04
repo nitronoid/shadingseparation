@@ -9,9 +9,9 @@ BEGIN_AUTOTEXGEN_NAMESPACE
 
 std::vector<fpreal3> computeHeightMap(const_span<fpreal> _shading, const fpreal3 _lightDirection)
 {
-  const auto L = (_lightDirection);
+  const auto L = glm::normalize(_lightDirection);
   const uinteger numNormals = _shading.size();
-  const fpreal regularization = 0.0001_f;
+  const fpreal regularization = 0.00005_f;
 
   std::vector<fpreal3> Nk(numNormals, {0._f, 0._f, 0._f});
   std::vector<fpreal3> Nk1(numNormals);
