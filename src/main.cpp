@@ -1,6 +1,7 @@
 #include "image_util.h"
 #include "separation.h"
 #include "specular.h"
+#include "normal.h"
 #include "types.h"
 #include "util.h"
 
@@ -35,6 +36,7 @@ inline static auto getParser()
 
 int main(int argc, char* argv[])
 {
+  using namespace atg;
   // Parse the commandline options
   auto parser     = getParser();
   const auto args = parser.parse(argc, argv);
@@ -46,88 +48,96 @@ int main(int argc, char* argv[])
 
   // Read the source image in as an array of rgbf
   auto imgResult =
-    atg::readImage<atg::fpreal3>(args["source"].as<std::string>());
+    readImage<fpreal3>(args["source"].as<std::string>());
   auto&& sourceImageData = imgResult.m_data;
   auto&& imageDimensions = imgResult.m_imageDim;
   auto numPixels         = imageDimensions.x * imageDimensions.y;
-  auto sourceImage       = atg::makeSpan(sourceImageData, numPixels);
+  auto sourceImage       = makeSpan(sourceImageData, numPixels);
 
   // Remove the extreme highlights and shadows by clamping intense pixels
-  atg::clampExtremeties(sourceImage);
+  clampExtremeties(sourceImage);
 
   // Allocated arrays to store the resulting textures
-  auto albedo           = std::make_unique<atg::fpreal3[]>(numPixels);
-  auto shadingIntensity = std::make_unique<atg::fpreal[]>(numPixels);
+  auto albedo           = std::make_unique<fpreal3[]>(numPixels);
+  auto shadingIntensity = std::make_unique<fpreal[]>(numPixels);
 
   // Split out the albedo and shading from the source image
-  atg::seperateShading(sourceImage,
+  seperateShading(sourceImage,
                        albedo.get(),
                        shadingIntensity.get(),
                        imageDimensions,
-                       args["region"].as<atg::uinteger>(),
-                       args["direct-iterations"].as<atg::uinteger>(),
-                       args["intensity-iterations"].as<atg::uinteger>(),
-                       args["quantize-slots"].as<atg::uinteger>());
-
-  // Shading map is adjusted to use a 0.5 neutral rather than 1.0
-  // This makes the shading detail much easier to view
-  tbb::parallel_for(tbb::blocked_range<atg::uinteger>{0u, numPixels},
-                    [&shadingIntensity](auto&& r) {
-                      const auto end = r.end();
-                      for (auto i = r.begin(); i < end; ++i)
-                        shadingIntensity[i] *= 0.5f;
-                    });
+                       args["region"].as<uinteger>(),
+                       args["direct-iterations"].as<uinteger>(),
+                       args["intensity-iterations"].as<uinteger>(),
+                       args["quantize-slots"].as<uinteger>());
 
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();
-  atg::writeImage(outputPrefix + "_albedo." + extension,
-                  atg::makeSpan(albedo, numPixels),
-                  imageDimensions);
-  atg::writeImage(outputPrefix + "_shading." + extension,
-                  atg::makeSpan(shadingIntensity, numPixels),
+
+  auto normals = computeHeightMap(makeSpan(shadingIntensity, numPixels), {1._f, 1._f, 1._f});
+  writeImage(outputPrefix + "_normals." + extension,
+                  normals.data(),
                   imageDimensions);
 
-  auto gtAlbedo = atg::makeSpan(albedo, numPixels);
+  // Shading map is adjusted to use a 0.5 neutral rather than 1.0
+  // This makes the shading detail much easier to view
+  tbb::parallel_for(tbb::blocked_range<uinteger>{0u, numPixels},
+                    [&shadingIntensity](auto&& r) {
+                      const auto end = r.end();
+                      for (auto i = r.begin(); i < end; ++i)
+                        shadingIntensity[i] *= 0.5_f;
+                    });
 
-  const uint numSets = 2u;
+  writeImage(outputPrefix + "_albedo." + extension,
+                  albedo.get(),
+                  imageDimensions);
+  writeImage(outputPrefix + "_shading." + extension,
+                  shadingIntensity.get(),
+                  imageDimensions);
+
+
+
+  //auto gtAlbedo = makeSpan(albedo, numPixels);
+
+  //const uint numSets = 2u;
   // Loading sets from stroke images
-  // auto set0img = atg::readImage<atg::fpreal3>("images/sets/set0.png");
-  // auto set0 = atg::makeSpan(set0img.m_data, numPixels);
-  // auto set1img = atg::readImage<atg::fpreal3>("images/sets/set1.png");
-  // auto set1 = atg::makeSpan(set1img.m_data, numPixels);
-  // std::vector<std::vector<atg::uinteger>> materialSets(numSets);
+  // auto set0img = readImage<fpreal3>("images/sets/set0.png");
+  // auto set0 = makeSpan(set0img.m_data, numPixels);
+  // auto set1img = readImage<fpreal3>("images/sets/set1.png");
+  // auto set1 = makeSpan(set1img.m_data, numPixels);
+  // std::vector<std::vector<uinteger>> materialSets(numSets);
   // materialSets[0].reserve(numPixels);
   // materialSets[1].reserve(numPixels);
   // for (uint i = 0u; i < numPixels; ++i)
   //{
-  //  if(set0[i].x > 0.f) materialSets[0].push_back(i);
-  //  if(set1[i].x > 0.f) materialSets[1].push_back(i);
+  //  if(set0[i].x > 0.0_f) materialSets[0].push_back(i);
+  //  if(set1[i].x > 0.0_f) materialSets[1].push_back(i);
   //}
 
-  auto materialSets = atg::initMaterialSets(gtAlbedo, imageDimensions, numSets);
-  atg::removeOutliers(materialSets, gtAlbedo);
-  auto probabilities = atg::computeProbability(materialSets, gtAlbedo);
+  //auto materialSets = initMaterialSets(gtAlbedo, imageDimensions, numSets);
+  //removeOutliers(materialSets, gtAlbedo);
+  //auto probabilities = computeProbability(materialSets, gtAlbedo);
 
-  for (uint i = 0u; i < numSets; ++i)
-  {
-    atg::writeImage(outputPrefix + "_probability_" + std::to_string(i) + "." +
-                      extension,
-                    atg::span<atg::fpreal>(probabilities[i]),
-                    imageDimensions);
-  }
+  //for (uint i = 0u; i < numSets; ++i)
+  //{
+  //  writeImage(outputPrefix + "_probability_" + std::to_string(i) + "." +
+  //                    extension,
+  //                  probabilities[i].data(),
+  //                  imageDimensions);
+  //}
 
-  auto img = std::make_unique<atg::fpreal[]>(numPixels);
-  for (uint i = 0u; i < numSets; ++i)
-  {
-    std::fill_n(img.get(), numPixels, 0.0f);
-    for (auto p : materialSets[i])
-      img[p] = 1.f;
+  //auto img = std::make_unique<fpreal[]>(numPixels);
+  //for (uint i = 0u; i < numSets; ++i)
+  //{
+  //  std::fill_n(img.get(), numPixels, 0.0_f);
+  //  for (auto p : materialSets[i])
+  //    img[p] = 1.0_f;
 
-    atg::writeImage(outputPrefix + "_material_set_" + std::to_string(i) + "." +
-                      extension,
-                    atg::makeSpan(img, numPixels),
-                    imageDimensions);
-  }
+  //  writeImage(outputPrefix + "_material_set_" + std::to_string(i) + "." +
+  //                    extension,
+  //                  img.get(),
+  //                  imageDimensions);
+  //}
 
   return 0;
 }
