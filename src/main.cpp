@@ -74,9 +74,14 @@ int main(int argc, char* argv[])
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();
 
-  auto normals = computeHeightMap(makeSpan(shadingIntensity, numPixels), {1._f, 1._f, 1._f});
+  auto normals = computeRelativeNormals(makeSpan(shadingIntensity, numPixels), {1._f, 1._f, 1._f});
   writeImage(outputPrefix + "_normals." + extension,
                   normals.data(),
+                  imageDimensions);
+  auto rh = computeRelativeHeights(normals.data(), imageDimensions);
+  auto h = computeAbsoluteHeights(rh.data(), imageDimensions);
+  writeImage(outputPrefix + "_h." + extension,
+                  h.data(),
                   imageDimensions);
 
   // Shading map is adjusted to use a 0.5 neutral rather than 1.0
