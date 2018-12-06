@@ -12,7 +12,7 @@ std::vector<fpreal3> computeRelativeNormals(const_span<fpreal> _shading, const f
 {
   const auto L = glm::normalize(_lightDirection);
   const uinteger numNormals = _shading.size();
-  const fpreal regularization = 0.0001_f;
+  const fpreal regularization = 0.001_f;
   const fpreal twoLambda = 2._f * regularization;
 
   std::vector<fpreal3> Nk(numNormals, {0._f, 0._f, 0._f});
@@ -35,7 +35,7 @@ std::vector<fpreal3> computeRelativeNormals(const_span<fpreal> _shading, const f
   aDiag = 1._f / aDiag;
 
 
-  for (uinteger iter = 0u; iter < 100u; ++iter)
+  for (uinteger iter = 0u; iter < 25u; ++iter)
   {
     auto Nsum = std::accumulate(Nk.begin(), Nk.end(), fpreal3(0.0_f));
     for (uinteger i = 0u; i < numNormals; ++i)
@@ -72,6 +72,7 @@ fpreal solveH(const fpreal2& _N1, const fpreal2& _N2)
   auto beta  = glm::half_pi<fpreal>() - alpha;
 
   fpreal h = std::sin(alpha) / std::sin(beta);
+  if (N1.x > 0.0 && N2.x < 0.0) h = -h;
   return h;
 }
 
@@ -131,7 +132,7 @@ std::vector<fpreal> computeAbsoluteHeights(fpreal2* _relativeHeights, uinteger2 
   static const auto clamp = [](int x, int lo, int hi) { return std::min(std::max(lo, x), hi); };
   auto idx = [&](auto x, auto y) { return clamp(y, 0, _imageDim.y-1) * _imageDim.x + clamp(x, 0, _imageDim.x-1); };
 
-  for (uinteger iter = 0u; iter < 90u; ++iter)
+  for (uinteger iter = 0u; iter < 2000u; ++iter)
   {
   for (integer y = 1; y < _imageDim.y-1; ++y)
   {
@@ -154,10 +155,13 @@ std::vector<fpreal> computeAbsoluteHeights(fpreal2* _relativeHeights, uinteger2 
   for (integer y = 1; y < _imageDim.y-1; ++y) HK1[idx(0, y)] = HK1[idx(1,y)];
   for (integer y = 1; y < _imageDim.y-1; ++y) HK1[idx(_imageDim.x-1, y)] = HK1[idx(_imageDim.x-2,y)] ;
   HK1[idx(0,0)] = HK1[idx(1,1)];
+  HK1[idx(_imageDim.x-1,0)] = HK1[idx(_imageDim.x-2,1)];
+  HK1[idx(0,_imageDim.y-1)] = HK1[idx(1,_imageDim.y-2)];
+  HK1[idx(_imageDim.x-1,_imageDim.y-1)] = HK1[idx(_imageDim.x-2,_imageDim.y-2)];
 
   for (uinteger f = 1u; f < 2u; ++f)
   {
-    std::cout<<"iter"<<iter<<": "<<HK1[2*_imageDim.x + f]<<'\n';
+    //std::cout<<"iter"<<iter<<": "<<HK1[2*_imageDim.x + f]<<'\n';
   }
   std::swap(HK, HK1);
   }

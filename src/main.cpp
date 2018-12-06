@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();
 
-  auto normals = computeRelativeNormals(makeSpan(shadingIntensity, numPixels), {1._f, 1._f, 1._f});
+  auto normals = computeRelativeNormals(makeSpan(shadingIntensity, numPixels), {-0.5_f, 0.5_f, 1._f});
   writeImage(outputPrefix + "_normals." + extension,
                   normals.data(),
                   imageDimensions);
@@ -102,9 +102,9 @@ int main(int argc, char* argv[])
 
 
 
-  //auto gtAlbedo = makeSpan(albedo, numPixels);
+  auto gtAlbedo = makeSpan(albedo, numPixels);
 
-  //const uint numSets = 2u;
+  const uint numSets = 2u;
   // Loading sets from stroke images
   // auto set0img = readImage<fpreal3>("images/sets/set0.png");
   // auto set0 = makeSpan(set0img.m_data, numPixels);
@@ -119,30 +119,46 @@ int main(int argc, char* argv[])
   //  if(set1[i].x > 0.0_f) materialSets[1].push_back(i);
   //}
 
-  //auto materialSets = initMaterialSets(gtAlbedo, imageDimensions, numSets);
-  //removeOutliers(materialSets, gtAlbedo);
-  //auto probabilities = computeProbability(materialSets, gtAlbedo);
+  auto materialSets = initMaterialSets(gtAlbedo, imageDimensions, numSets);
+  removeOutliers(materialSets, gtAlbedo);
+  auto probabilities = computeProbability(materialSets, gtAlbedo);
 
-  //for (uint i = 0u; i < numSets; ++i)
-  //{
-  //  writeImage(outputPrefix + "_probability_" + std::to_string(i) + "." +
-  //                    extension,
-  //                  probabilities[i].data(),
-  //                  imageDimensions);
-  //}
+  for (uint i = 0u; i < numSets; ++i)
+  {
+    writeImage(outputPrefix + "_probability_" + std::to_string(i) + "." +
+                      extension,
+                    probabilities[i].data(),
+                    imageDimensions);
+  }
 
-  //auto img = std::make_unique<fpreal[]>(numPixels);
-  //for (uint i = 0u; i < numSets; ++i)
-  //{
-  //  std::fill_n(img.get(), numPixels, 0.0_f);
-  //  for (auto p : materialSets[i])
-  //    img[p] = 1.0_f;
+  float coef[2] = { 0.1f, 0.6f };
+  std::vector<fpreal> roughness(numPixels);
+  for (uint i = 0u; i < numPixels; ++i)
+    roughness[i] = probabilities[0][i] * coef[0] + probabilities[1][i] * coef[1];
+  writeImage(outputPrefix + "_roughness." + extension,
+                  roughness.data(),
+                  imageDimensions);
 
-  //  writeImage(outputPrefix + "_material_set_" + std::to_string(i) + "." +
-  //                    extension,
-  //                  img.get(),
-  //                  imageDimensions);
-  //}
+  float coefs[2] = { 0.99f, 0.2f };
+  std::vector<fpreal> specular(numPixels);
+  for (uint i = 0u; i < numPixels; ++i)
+    specular[i] = probabilities[0][i] * coefs[0] + probabilities[1][i] * coefs[1];
+  writeImage(outputPrefix + "_specular." + extension,
+                  specular.data(),
+                  imageDimensions);
+
+  auto img = std::make_unique<fpreal[]>(numPixels);
+  for (uint i = 0u; i < numSets; ++i)
+  {
+    std::fill_n(img.get(), numPixels, 0.0_f);
+    for (auto p : materialSets[i])
+      img[p] = 1.0_f;
+
+    writeImage(outputPrefix + "_material_set_" + std::to_string(i) + "." +
+                      extension,
+                    img.get(),
+                    imageDimensions);
+  }
 
   return 0;
 }
