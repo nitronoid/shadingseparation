@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   const auto outputPrefix = args["output"].as<std::string>();
   const auto extension    = args["format"].as<std::string>();
 
-  auto normals = computeRelativeNormals(makeSpan(shadingIntensity, numPixels), {-0.5_f, 0.5_f, 1._f});
+  auto normals = computeRelativeNormals(makeSpan(shadingIntensity, numPixels), {-0.1_f, 0.2_f, 0.5_f});
   writeImage(outputPrefix + "_normals." + extension,
                   normals.data(),
                   imageDimensions);

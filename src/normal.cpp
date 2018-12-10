@@ -101,21 +101,27 @@ fpreal solveHG(const fpreal2& _N1, const fpreal2& _N2)
 
 std::vector<fpreal2> computeRelativeHeights(fpreal3* _normals, uinteger2 _imageDim)
 {
-  const uinteger numHeights = _imageDim.x * _imageDim.y;
-  std::vector<fpreal2> relativeHeights(numHeights);
-  //std::cout<<solveH({-5.f, 2.f}, {-2.f, 4.f})<<'\n';
+  // Allocate for the relative heights
+  std::vector<fpreal2> relativeHeights(_imageDim.x * _imageDim.y);
 
+  // Iterate over all except last row and column, as they will have no,
+  // neighbours to store a relative height for.
   for (uinteger y = 0u; y < _imageDim.y - 1u; ++y)
   {
     for (uinteger x = 0u; x < _imageDim.x - 1u; ++x)
     {
-      auto& rh = relativeHeights[y * _imageDim.x + x];
-      auto& N   = _normals[y * _imageDim.x + x];
-      auto& Nnx = _normals[y * _imageDim.x + x + 1];
-      auto& Nny = _normals[(y + 1u) * _imageDim.x + x];
+      // Current normal
+      auto& N00 = _normals[y * _imageDim.x + x];
+      // Neighbour to the right
+      auto& N10 = _normals[y * _imageDim.x + x + 1];
+      // Neighbour below
+      auto& N01 = _normals[(y + 1u) * _imageDim.x + x];
 
-      rh.x = solveH({N.x, N.z}, {Nnx.x, Nnx.z});
-      rh.y = solveH({N.y, N.z}, {Nny.y, Nny.z});
+      // Solve the x relative height using normals projected onto xz plane,
+      // and y relative height with projection onto yz plane
+      auto& rh = relativeHeights[y * _imageDim.x + x];
+      rh.x = solveH({N00.x, N00.z}, {N10.x, N10.z});
+      rh.y = solveH({N00.y, N00.z}, {N01.y, N01.z});
     }
   }
 
