@@ -7,6 +7,8 @@
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
+void clampExtremeties(span<fpreal> io_image);
+
 void clampExtremeties(span<fpreal3> io_image);
 
 std::vector<fpreal> calculateIntensity(const span<fpreal3> _image);

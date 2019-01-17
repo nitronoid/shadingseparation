@@ -1,8 +1,11 @@
-atg
-obj
-dump.ppm
+*obj*
+*.o
+*.swp
+atg/lib
+separation/separator
+probability/probability
+height_field/height_field
 *.pro.user*
 *.qmake*
-Makefile
-*.ppm
+*Makefile*
 results

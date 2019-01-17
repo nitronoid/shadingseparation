@@ -7,6 +7,18 @@
 
 BEGIN_AUTOTEXGEN_NAMESPACE
 
+void clampExtremeties(span<fpreal> io_image)
+{
+  // TODO: take caps as input
+  // Remove highlights and shadows
+  static const fpreal shadowCap(1.0_f / 255.0_f);
+  static const fpreal highlightCap(254.0_f / 255.0_f);
+  for (auto& pixel : io_image)
+  {
+    pixel = glm::clamp(pixel, shadowCap, highlightCap);
+  }
+}
+
 void clampExtremeties(span<fpreal3> io_image)
 {
   // TODO: take caps as input

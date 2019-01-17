@@ -1,13 +1,3 @@
-TEMPLATE = app
-TARGET = atg
-
-UI_HEADERS_DIR = ui
-OBJECTS_DIR = obj
-
-QT -= core gui
-CONFIG += console c++14
-CONFIG -= app_bundle gui
-
 INCLUDEPATH += \
     /usr/local/include/glm/glm \
     /usr/local/include/glm \
@@ -15,7 +5,6 @@ INCLUDEPATH += \
     /public/devel/2018/include \
     /public/devel/2018/include/glm \
     /public/devel/2018/tbb/include \
-    $$PWD/include 
 
 DEPPATH = $$PWD/dep
 DEPS = $$system(ls $${DEPPATH})
@@ -26,9 +15,9 @@ DEPS = $$system(ls $${DEPPATH})
   }
 }
 
-HEADERS += $$files(include/*.h, true)
-HEADERS += $$files(include/*.inl, true)
-SOURCES += $$files(src/*.cpp, true)
+QT -= core gui
+CONFIG += console c++14
+CONFIG -= app_bundle gui
 
 #Linker search paths
 LIBS += -L/public/devel/2018/tbb/lib/intel64/gcc4.7
@@ -36,7 +25,7 @@ LIBS += -L/public/devel/2018/tbb/lib/intel64/gcc4.7
 LIBS +=  -ltbb -lOpenImageIO
 
 #DEFINES += _GLIBCXX_PARALLEL
-DEFINES += GLM_ENABLE_EXPERIMENTAL GLM_FORCE_CTOR_INIT
+DEFINES += GLM_ENABLE_EXPERIMENTAL GLM_FORCE_CTOR_INIT GLM_FORCE_RADIANS
 
 AUTOTEXGEN_NAMESPACE =atg
 QMAKE_CXXFLAGS += \
